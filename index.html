@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.7">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="zh-Hant"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;Q1自媒體陪跑班 - 學員系統&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/react@18/umd/react.production.min.js"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/@babel/standalone/babel.min.js"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/lucide@latest"&gt;&lt;/script&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body class="bg-slate-50 text-slate-700"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="root"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script type="module"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const firebaseConfig = {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>apiKey: "AIzaSyBlo6fIFqmEMyK3YTGBRg1S9Lw3OcZdczU",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>authDomain: "test-fee8d.firebaseapp.com",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>projectId: "test-fee8d",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>storageBucket: "test-fee8d.firebasestorage.app",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>messagingSenderId: "415299571304",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>appId: "1:415299571304:web:07dff250c930d4f99035dd",</p>
+<p class="p1"><span class="Apple-converted-space">            </span>measurementId: "G-TXQ7NZ8LPT"</p>
+<p class="p1"><span class="Apple-converted-space">        </span>};</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const app = initializeApp(firebaseConfig);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const auth = getAuth(app);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const db = getFirestore(app);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>window.firebaseEnv = { auth, db, appId: 'class-assignment-portal-v2', signInAnonymously, onAuthStateChanged, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc };</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script type="text/babel"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const { useState, useEffect } = React;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const STUDENT_LIST = { "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"], "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"] };</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const WEEKS = ["1/4", "1/11", "1/18", "1/25", "2/1", "2/8", "2/15", "2/22", "3/1", "3/8", "3/15", "3/22"];</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const Icon = ({ name }) =&gt; { useEffect(() =&gt; lucide.createIcons(), []); return &lt;i data-lucide={name} style={{width:20, height:20}}&gt;&lt;/i&gt;; };</p>
+<p class="p1"><span class="Apple-converted-space">        </span>function App() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const [assignments, setAssignments] = useState([]);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const [view, setView] = useState('upload');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>useEffect(() =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>const { auth, signInAnonymously, onAuthStateChanged, db, appId, collection, onSnapshot } = window.firebaseEnv;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>signInAnonymously(auth);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>onAuthStateChanged(auth, (u) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>if (u) onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (s) =&gt; setAssignments(s.docs.map(d =&gt; ({id:d.id, ...d.data()}))));</p>
+<p class="p1"><span class="Apple-converted-space">                </span>});</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}, []);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if (!identity) return &lt;div className="h-screen flex items-center justify-center bg-slate-100 p-4"&gt;&lt;div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md text-center"&gt;&lt;h1 className="text-2xl font-bold mb-6 text-indigo-600"&gt;Q1 陪跑班&lt;/h1&gt;&lt;select id="s" className="w-full p-3 border rounded-xl mb-4 font-bold outline-none"&gt;&lt;option value=""&gt;請點選姓名&lt;/option&gt;{Object.values(STUDENT_LIST).flat().map(n=&gt;&lt;option key={n} value={n}&gt;{n}&lt;/option&gt;)}&lt;/select&gt;&lt;button onClick={()=&gt;{const n=document.getElementById('s').value; if(n){setIdentity({name:n}); localStorage.setItem('portal_identity',JSON.stringify({name:n}));}}} className="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold"&gt;進入&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>return (</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="min-h-screen flex flex-col lg:flex-row"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;nav className="w-64 bg-white border-r p-6 space-y-4 shadow-sm"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="font-bold text-indigo-600 mb-8 px-2"&gt;學員: {identity.name}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;setView('upload')} className={`w-full flex items-center gap-2 p-3 rounded-xl font-bold ${view==='upload'?'bg-indigo-600 text-white':'text-slate-400'}`}&gt;&lt;Icon name="cloud-upload"/&gt;上傳&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;setView('all')} className={`w-full flex items-center gap-2 p-3 rounded-xl font-bold ${view==='all'?'bg-indigo-600 text-white':'text-slate-400'}`}&gt;&lt;Icon name="bar-chart-3"/&gt;總覽&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;{localStorage.clear(); location.reload();}} className="w-full flex items-center gap-2 p-3 text-slate-400 hover:text-red-500 font-bold"&gt;&lt;Icon name="log-out"/&gt;登出&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/nav&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;main className="flex-1 p-6"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>{view==='upload' ? (</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;div className="max-w-3xl mx-auto space-y-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>{WEEKS.map(w =&gt; (</p>
+<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;div key={w} className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;div className="font-bold text-indigo-600 w-12"&gt;{w}&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;input id={`i-${w}`} className="flex-1 border-b p-2 outline-none text-sm" placeholder="貼上網址..."/&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;button onClick={async()=&gt;{const el=document.getElementById(`i-${w}`); if(el.value){await window.firebaseEnv.addDoc(window.firebaseEnv.collection(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'assignments'), {studentName:identity.name, weekDate:w, url:el.value, submittedAt:window.firebaseEnv.serverTimestamp()}); el.value='';}}} className="bg-indigo-600 text-white px-4 py-1 rounded-lg font-bold"&gt;送出&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>))}</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>) : (</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;div className="bg-white p-6 rounded-3xl shadow-sm overflow-x-auto"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>&lt;table className="w-full text-sm"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;thead&gt;&lt;tr&gt;&lt;th className="p-2 text-left"&gt;姓名&lt;/th&gt;{WEEKS.map(w=&gt;&lt;th key={w} className="p-2 text-[10px]"&gt;{w}&lt;/th&gt;)}&lt;/tr&gt;&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;tbody&gt;{Object.values(STUDENT_LIST).flat().map(n=&gt;(&lt;tr key={n} className="border-t"&gt;&lt;td className="p-2 font-bold"&gt;{n}&lt;/td&gt;{WEEKS.map(w=&gt;&lt;td key={w} className="p-2"&gt;&lt;div className={`w-3 h-3 mx-auto rounded-full ${assignments.some(a=&gt;a.studentName===n&amp;&amp;a.weekDate===w)?'bg-green-500':'bg-slate-100'}`}&gt;&lt;/div&gt;&lt;/td&gt;)}&lt;/tr&gt;))}&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                                </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>)}</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/main&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>ReactDOM.createRoot(document.getElementById('root')).render(&lt;App /&gt;);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
