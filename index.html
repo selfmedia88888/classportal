@@ -3,105 +3,392 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Q1自媒體陪跑班 - 作業入口</title>
+    <title>Q1自媒體陪跑班 - 學員系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .blue-gradient { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); }
+        .card-shadow { box-shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.1); }
+        #loading-overlay { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .progress-bar { transition: width 0.5s ease-out; }
     </style>
 </head>
 <body>
+    <div id="loading-overlay" class="font-black text-indigo-600 text-2xl italic animate-pulse">系統穩定載入中... 🚀</div>
     <div id="root"></div>
 
-    <script type="text/babel">
-        // 這裡需要填入你的 Firebase 資訊，否則無法儲存資料
-        // 你可以去 Firebase Console 申請，或是先用這組空的格式
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, setDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
         const firebaseConfig = {
-            apiKey: "請替換成你的API金鑰",
-            authDomain: "你的專案.firebaseapp.com",
-            projectId: "你的專案ID",
-            storageBucket: "你的專案.appspot.com",
-            messagingSenderId: "...",
-            appId: "..."
+            apiKey: "AIzaSyBlo6fIFqmEMyK3YTGBRg1S9Lw3OcZdczU",
+            authDomain: "test-fee8d.firebaseapp.com",
+            projectId: "test-fee8d",
+            storageBucket: "test-fee8d.firebasestorage.app",
+            messagingSenderId: "415299571304",
+            appId: "1:415299571304:web:07dff250c930d4f99035dd",
+            measurementId: "G-TXQ7NZ8LPT"
         };
 
-        // 解構 React 常用功能
-        const { useState, useEffect, useMemo } = React;
-        const { 
-            User, CloudUpload, MessageSquare, LogOut, Send, 
-            Plus, Trash2, ExternalLink, Info, BarChart3, 
-            Calendar, Heart, AlertCircle, CheckCircle2, Clock 
-        } = lucide;
+        const app = initializeApp(firebaseConfig);
+        window.fb = {
+            auth: getAuth(app),
+            db: getFirestore(app),
+            collection, doc, onSnapshot, addDoc, setDoc, serverTimestamp, deleteDoc,
+            signInAnonymously, onAuthStateChanged,
+            appId: 'class-assignment-portal-v2'
+        };
+    </script>
 
-        // --- 這裡開始貼入你原本的邏輯代碼 (我已幫你微調以符合 HTML 運行) ---
-        
-        const SEMESTER_WEEKS = [
-            { date: "1/4", deadlineWeek: "1/11" },
-            { date: "1/11", deadlineWeek: "1/11" },
-            { date: "1/18", deadlineWeek: "1/25" },
-            { date: "1/25", deadlineWeek: "1/25" },
-            { date: "2/1", deadlineWeek: "2/8" },
-            { date: "2/8", deadlineWeek: "2/8" },
-            { date: "2/15", deadlineWeek: "2/22" },
-            { date: "2/22", deadlineWeek: "2/22" },
-            { date: "3/1", deadlineWeek: "3/8" },
-            { date: "3/8", deadlineWeek: "3/8" },
-            { date: "3/15", deadlineWeek: "3/22" },
-            { date: "3/22", deadlineWeek: "3/22" }
-        ];
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
         const STUDENT_LIST = {
             "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"],
             "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"]
         };
+        
+        const SEMESTER_WEEKS = [
+            { date: "1/4", deadlineWeek: "1/11" }, { date: "1/11", deadlineWeek: "1/11" },
+            { date: "1/18", deadlineWeek: "1/25" }, { date: "1/25", deadlineWeek: "1/25" },
+            { date: "2/1", deadlineWeek: "2/8" }, { date: "2/8", deadlineWeek: "2/8" },
+            { date: "2/15", deadlineWeek: "2/22" }, { date: "2/22", deadlineWeek: "2/22" },
+            { date: "3/1", deadlineWeek: "3/8" }, { date: "3/8", deadlineWeek: "3/8" },
+            { date: "3/15", deadlineWeek: "3/22" }, { date: "3/22", deadlineWeek: "3/22" }
+        ];
 
-        const App = () => {
-            const [identity, setIdentity] = useState(null);
+        const Icon = ({ name, size = 20 }) => {
+            useEffect(() => { if (window.lucide) lucide.createIcons(); }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }}></i>;
+        };
+
+        function App() {
+            const [ready, setReady] = useState(false);
+            const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));
             const [currentView, setCurrentView] = useState('upload');
-            const [loading, setLoading] = useState(false); // HTML 版先預設不載入
+            const [assignments, setAssignments] = useState([]);
+            const [comments, setComments] = useState([]);
+            const [announcement, setAnnouncement] = useState("✨ 歡迎來到陪跑班系統");
+            const [selectedPeerDate, setSelectedPeerDate] = useState("1/4");
+            const [overviewClass, setOverviewClass] = useState("早班");
 
-            // 為了讓你在 HTML 也能看到畫面，我簡化了登入邏輯
-            const handleLogin = (name, className) => {
-                const idData = { name, class: className };
-                setIdentity(idData);
-                localStorage.setItem('portal_identity', JSON.stringify(idData));
+            useEffect(() => {
+                const check = setInterval(() => {
+                    if (window.fb) {
+                        const env = window.fb;
+                        env.signInAnonymously(env.auth);
+                        env.onAuthStateChanged(env.auth, (u) => {
+                            if (u) {
+                                env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'assignments'), s => setAssignments(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                                env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'comments'), s => {
+                                    const data = s.docs.map(d => ({id:d.id, ...d.data()}));
+                                    data.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                                    setComments(data);
+                                });
+                                env.onSnapshot(env.doc(env.db, 'artifacts', env.appId, 'public', 'announcement'), d => { 
+                                    if(d.exists()) setAnnouncement(d.data().text); 
+                                });
+                                setReady(true);
+                                document.getElementById('loading-overlay').style.display = 'none';
+                            }
+                        });
+                        clearInterval(check);
+                    }
+                }, 500);
+            }, []);
+
+            const getHWStatus = (weekDate, createdAt) => {
+                if (!createdAt) return "未完成";
+                const [m, d] = weekDate.split('/').map(Number);
+                const deadline = new Date(new Date().getFullYear(), m - 1, d, 20, 0, 0);
+                const submitDate = createdAt.toDate ? createdAt.toDate() : new Date();
+                return submitDate > deadline ? "遲到" : "準時";
             };
 
-            // 你的其他邏輯... (如 UploadView, NavItem 等，因篇幅建議先看介面)
-            
+            const getFBStatus = (weekDate, studentClass, createdAt) => {
+                if (!createdAt) return "未完成";
+                const weekInfo = SEMESTER_WEEKS.find(w => w.date === weekDate);
+                const [m, d] = weekInfo.deadlineWeek.split('/').map(Number);
+                const deadlineDate = new Date(new Date().getFullYear(), m - 1, d, 0, 0, 0);
+                deadlineDate.setDate(deadlineDate.getDate() + 1);
+                const hour = studentClass === "早班" ? 5 : 21;
+                const min = studentClass === "早班" ? 0 : 30;
+                deadlineDate.setHours(hour, min, 0);
+                const commentDate = createdAt.toDate ? createdAt.toDate() : new Date();
+                return commentDate > deadlineDate ? "遲到" : "準時";
+            };
+
+            const getPeerStats = (weekDate, userName, userClass) => {
+                const timelyTargets = assignments.filter(a =>
+                    a.weekDate === weekDate && a.studentClass === userClass && a.studentName !== userName && getHWStatus(a.weekDate, a.createdAt) === "準時"
+                );
+                const completed = timelyTargets.filter(a =>
+                    comments.some(c => c.assignmentId === a.id && c.author === userName)
+                );
+                return { 
+                    numerator: completed.length, 
+                    denominator: timelyTargets.length,
+                    remainingNames: timelyTargets.filter(a => !comments.some(c => c.assignmentId === a.id && c.author === userName)).map(a => a.studentName)
+                };
+            };
+
+            if (!ready) return null;
+
             if (!identity) {
                 return (
-                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-                        <div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md text-center border border-slate-100">
-                            <h1 className="text-3xl font-black text-indigo-600 mb-2">Q1自媒體陪跑班</h1>
-                            <p className="text-slate-400 font-medium mb-8">準備好開始了嗎？</p>
-                            <div className="space-y-6 text-left">
-                                <button onClick={() => handleLogin('測試員', '早班')} className="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg"> 點此快速進入測試 </button>
-                                <p className="text-xs text-center text-red-500">注意：此為 HTML 預覽版，需配置 Firebase 才能儲存資料</p>
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border-t-8 border-indigo-600 text-center font-black">
+                            <h1 className="text-3xl text-slate-800 mb-6 italic underline decoration-indigo-200">Q1 Classroom</h1>
+                            <div className="grid grid-cols-2 gap-2 mb-4">
+                                {["早班", "晚班"].map(c => (
+                                    <button key={c} onClick={() => window.selCls = c} className="p-3 border-2 rounded-2xl border-slate-100 text-slate-400 focus:bg-indigo-600 focus:text-white transition">{c}</button>
+                                ))}
                             </div>
+                            <select id="name-sel" className="w-full p-4 border-2 border-slate-100 rounded-2xl mb-8 outline-none bg-slate-50">
+                                <option value="">選取姓名</option>
+                                {Object.values(STUDENT_LIST).flat().map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <button onClick={() => {
+                                const n = document.getElementById('name-sel').value;
+                                if(n && window.selCls) {
+                                    const d = { name: n, class: window.selCls };
+                                    setIdentity(d);
+                                    localStorage.setItem('portal_identity', JSON.stringify(d));
+                                }
+                            }} className="w-full blue-gradient text-white p-4 rounded-2xl font-black shadow-lg">進入教室</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row text-slate-700">
-                    <nav className="w-full lg:w-64 bg-white border-r flex flex-col p-6 shadow-sm">
-                        <div className="font-black text-xl text-indigo-600 mb-10">納米裁縫師</div>
-                        <div className="text-sm font-bold text-slate-600">你好，{identity.name}</div>
-                        <p className="text-xs text-slate-400 mt-2">目前正在預覽模式</p>
+                <div className="min-h-screen flex flex-col lg:flex-row">
+                    <nav className="w-full lg:w-72 bg-white p-8 flex flex-col border-r border-slate-200 shrink-0 font-black">
+                        <div className="blue-gradient p-5 rounded-[30px] text-white shadow-lg mb-10 flex items-center gap-4 text-left">
+                            <Icon name="user" />
+                            <div className="overflow-hidden">
+                                <div className="text-lg truncate">{identity.name}</div>
+                                <div className="text-[10px] opacity-80 uppercase tracking-widest">{identity.class}</div>
+                            </div>
+                        </div>
+                        <div className="space-y-2 flex-1 text-left">
+                            <button onClick={()=>setCurrentView('upload')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${currentView==='upload'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}><Icon name="file-up" />作業上傳</button>
+                            <button onClick={()=>setCurrentView('peer')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${currentView==='peer'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}><Icon name="users-round" />同儕互評</button>
+                            <button onClick={()=>setCurrentView('personal')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${currentView==='personal'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}><Icon name="heart" />我的回饋</button>
+                            <button onClick={()=>setCurrentView('overview')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${currentView==='overview'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}><Icon name="layout-dashboard" />進度牆</button>
+                            <button onClick={()=>{localStorage.clear(); location.reload();}} className="mt-10 w-full flex items-center gap-4 p-4 text-slate-300 hover:text-red-500 transition"><Icon name="power" />登出系統</button>
+                        </div>
                     </nav>
-                    <main className="flex-1 p-10">
-                        <h2 className="text-2xl font-black mb-4">歡迎來到數位教室</h2>
-                        <p>這是一個 React 元件成功在 HTML 運行的結果！</p>
+
+                    <main className="flex-1 p-6 lg:p-12 overflow-y-auto font-black text-left">
+                        <div className="max-w-5xl mx-auto mb-10 bg-white p-6 rounded-[30px] card-shadow border border-slate-100 flex items-center gap-6 relative group">
+                            <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 shadow-inner"><Icon name="megaphone" /></div>
+                            <div className="flex-1 text-slate-700 tracking-tight">{announcement}</div>
+                            <button onClick={async () => {
+                                if (prompt("管理密碼:") === "admin") {
+                                    const nt = prompt("輸入公告:", announcement);
+                                    if(nt) await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'announcement'), {text: nt});
+                                }
+                            }} className="p-2 text-slate-200 hover:text-indigo-600 transition opacity-0 group-hover:opacity-100"><Icon name="settings" size={16} /></button>
+                        </div>
+
+                        {currentView === 'upload' ? (
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic">Weekly Submission</h2>
+                                {SEMESTER_WEEKS.map((w, i) => (
+                                    <div key={i} className="bg-white p-8 rounded-[40px] card-shadow border border-slate-50 flex flex-col md:flex-row gap-6 items-center">
+                                        <div className="w-14 h-14 blue-gradient rounded-2xl flex items-center justify-center text-white shrink-0 shadow-md italic">W{i+1}</div>
+                                        <div className="flex-1 w-full space-y-4">
+                                            <div className="text-[10px] text-slate-300 uppercase tracking-widest italic">{w.date} 20:00 截止</div>
+                                            {assignments.filter(a => a.weekDate === w.date && a.studentName === identity.name).map(a => {
+                                                const status = getHWStatus(a.weekDate, a.createdAt);
+                                                return (
+                                                    <div key={a.id} className="bg-slate-50 p-4 rounded-2xl flex justify-between items-center border border-slate-100">
+                                                        <div className="flex items-center gap-3 overflow-hidden">
+                                                            <a href={a.url} target="_blank" className="text-sm text-rose-500 underline truncate">{a.url}</a>
+                                                            <span className={`text-[9px] px-2 py-0.5 rounded-md ${status==='準時'?'bg-emerald-100 text-emerald-600':'bg-amber-100 text-amber-600'}`}>上傳狀態：{status}</span>
+                                                        </div>
+                                                        <button onClick={async ()=>{ if(confirm("刪除？")) await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'assignments', a.id)); }} className="ml-4 text-slate-400 hover:text-red-500 text-xs">刪除</button>
+                                                    </div>
+                                                );
+                                            })}
+                                            <div className="flex gap-3">
+                                                <input id={`in-${w.date}`} className="flex-1 bg-slate-50 border-b-2 border-slate-100 outline-none p-3 text-sm focus:border-rose-400 transition" placeholder="輸入連結..." />
+                                                <button onClick={async () => {
+                                                    const el = document.getElementById(`in-${w.date}`);
+                                                    if(el.value) {
+                                                        await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'assignments'), { studentName: identity.name, studentClass: identity.class, weekDate: w.date, url: el.value, createdAt: window.fb.serverTimestamp() });
+                                                        el.value = '';
+                                                    }
+                                                }} className="blue-gradient text-white px-8 py-3 rounded-2xl shadow-lg">提交</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : currentView === 'peer' ? (
+                            <div className="max-w-6xl mx-auto space-y-6">
+                                {/* 評價統計儀表板 Dashboard */}
+                                {(() => {
+                                    const stats = getPeerStats(selectedPeerDate, identity.name, identity.class);
+                                    const percent = stats.denominator > 0 ? (stats.numerator / stats.denominator) * 100 : 0;
+                                    return (
+                                        <div className="bg-white p-8 rounded-[40px] card-shadow border-l-8 border-indigo-600 flex flex-col md:flex-row gap-8 items-center justify-between">
+                                            <div className="flex-1 w-full">
+                                                <div className="flex justify-between items-end mb-2">
+                                                    <div>
+                                                        <h3 className="text-2xl text-slate-800 italic">評價進度儀表板</h3>
+                                                        <p className="text-slate-400 text-xs font-black">針對本週 {selectedPeerDate} 準時提交作業的同學</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-4xl text-indigo-600">{stats.numerator}</span>
+                                                        <span className="text-slate-300 mx-1">/</span>
+                                                        <span className="text-xl text-slate-400">{stats.denominator}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="h-full blue-gradient progress-bar" style={{ width: `${percent}%` }}></div>
+                                                </div>
+                                                {percent === 100 ? (
+                                                    <div className="mt-4 text-emerald-500 flex items-center gap-2 animate-bounce">
+                                                        <Icon name="party-popper" /> 你太棒了！本週評價已全數完成！
+                                                    </div>
+                                                ) : percent >= 80 ? (
+                                                    <div className="mt-4 text-indigo-500 flex items-center gap-2">
+                                                        <Icon name="zap" /> 你很棒，快完成了！加油！
+                                                    </div>
+                                                ) : stats.remainingNames.length > 0 ? (
+                                                    <div className="mt-4 flex flex-wrap gap-2 items-center">
+                                                        <span className="text-xs text-slate-400">待評價同學：</span>
+                                                        {stats.remainingNames.map(n => (
+                                                            <span key={n} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] border border-amber-100">@{n}</span>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                            <div className="shrink-0">
+                                                 <select value={selectedPeerDate} onChange={(e)=>setSelectedPeerDate(e.target.value)} className="bg-slate-50 p-4 rounded-2xl shadow-inner outline-none border border-slate-100 text-indigo-600 font-black">
+                                                    {SEMESTER_WEEKS.map(w => <option key={w.date} value={w.date}>週次：{w.date}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {assignments.filter(a => a.weekDate === selectedPeerDate && a.studentClass === identity.class).map(a => {
+                                        const isSelf = a.studentName === identity.name;
+                                        const hasCommented = comments.some(c => c.assignmentId === a.id && c.author === identity.name);
+                                        return (
+                                            <div key={a.id} className={`bg-white rounded-[40px] p-6 card-shadow flex flex-col h-[480px] border-2 transition ${isSelf ? 'border-indigo-500 ring-8 ring-indigo-50' : hasCommented ? 'border-emerald-100' : 'border-transparent'}`}>
+                                                <div className="flex justify-between items-start mb-6 shrink-0 text-left">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-slate-800 text-lg">{a.studentName}</div>
+                                                        {hasCommented && !isSelf && <span className="text-emerald-500"><Icon name="check-circle-2" size={16}/></span>}
+                                                    </div>
+                                                    <a href={a.url} target="_blank" className="px-5 py-2 bg-indigo-50 text-indigo-600 rounded-2xl text-xs flex items-center gap-1 hover:bg-indigo-600 hover:text-white transition shadow-sm">觀看 <Icon name="external-link" size={12} /></a>
+                                                </div>
+                                                <div className="flex-1 overflow-y-auto space-y-3 mb-4 scrollbar-hide">
+                                                    {comments.filter(c => c.assignmentId === a.id).map(c => {
+                                                        const fbStatus = getFBStatus(selectedPeerDate, identity.class, c.createdAt);
+                                                        return (
+                                                            <div key={c.id} className={`p-3 rounded-2xl text-[10px] border border-slate-100 group relative ${c.author === a.studentName ? 'bg-indigo-50' : 'bg-slate-50'}`}>
+                                                                <div className="text-indigo-600 mb-1 flex justify-between items-center">
+                                                                    <span>{c.author} {c.author === a.studentName && <span className="text-indigo-300 opacity-80 ml-1">(創作理念/目的)</span>}</span>
+                                                                    <span className={`text-[7px] px-1 rounded-sm font-black ${fbStatus==='準時'?'bg-emerald-100 text-emerald-600':'bg-amber-100 text-amber-600'}`}>{fbStatus}</span>
+                                                                </div>
+                                                                <div className="text-slate-600 font-bold">{c.text}</div>
+                                                                {c.author === identity.name && <button onClick={async ()=> { if(confirm("刪除？")) await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments', c.id)); }} className="opacity-0 group-hover:opacity-100 absolute right-2 top-2 text-slate-300 hover:text-red-500">×</button>}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border">
+                                                    <input id={`cm-${a.id}`} className="flex-1 bg-transparent p-3 text-[10px] outline-none" placeholder="輸入回饋..." />
+                                                    <button onClick={async () => {
+                                                        const el = document.getElementById(`cm-${a.id}`);
+                                                        if(el.value) {
+                                                            await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments'), { assignmentId: a.id, author: identity.name, text: el.value, createdAt: window.fb.serverTimestamp() });
+                                                            el.value = '';
+                                                        }
+                                                    }} className="bg-slate-800 text-white p-3 rounded-xl shadow-md"><Icon name="send" size={14} /></button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : currentView === 'personal' ? (
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic">Received Feedback</h2>
+                                {assignments.filter(a => a.studentName === identity.name).sort((a,b)=> (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).map(a => (
+                                    <div key={a.id} className="bg-white p-8 rounded-[40px] card-shadow border border-slate-100 mb-6">
+                                        <div className="text-indigo-600 italic mb-6">Week {a.weekDate} 作品回饋</div>
+                                        <div className="space-y-4 text-left">
+                                            {comments.filter(c => c.assignmentId === a.id && c.author !== identity.name).map((c, idx) => (
+                                                <div key={idx} className="flex gap-4 items-start">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 text-xs shadow-sm">{c.author[0]}</div>
+                                                    <div className="bg-slate-50 p-4 rounded-[24px] flex-1 border border-slate-100">
+                                                        <div className="text-[9px] text-indigo-400 mb-1">{c.author}</div>
+                                                        <div className="text-sm text-slate-600">{c.text}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {comments.filter(c => c.assignmentId === a.id && c.author !== identity.name).length === 0 && <div className="text-center py-6 text-slate-200 text-xs italic">尚未收到回饋</div>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-8 font-black">
+                                <div className="flex gap-4 p-2 bg-white rounded-3xl card-shadow inline-flex border border-slate-100">
+                                    {["早班", "晚班"].map(c => (
+                                        <button key={c} onClick={()=>setOverviewClass(c)} className={`px-10 py-3 rounded-2xl transition ${overviewClass === c ? 'blue-gradient text-white shadow-lg' : 'text-slate-300'}`}>{c}</button>
+                                    ))}
+                                </div>
+                                <div className="bg-white rounded-[40px] card-shadow border border-slate-100 overflow-hidden overflow-x-auto">
+                                    <table className="min-w-[900px] text-center">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100">
+                                                <th className="p-6 text-left text-xs text-indigo-400 sticky left-0 bg-white border-r">學員姓名</th>
+                                                {SEMESTER_WEEKS.map(w => <th key={w.date} className="p-4 text-[10px] text-slate-400">{w.date}<br/><span className="text-[8px] opacity-40">HW | FB</span></th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {STUDENT_LIST[overviewClass].map(name => (
+                                                <tr key={name} className="border-b border-slate-50 hover:bg-slate-50 transition">
+                                                    <td className="p-4 text-sm text-left text-slate-600 sticky left-0 bg-white border-r">{name}</td>
+                                                    {SEMESTER_WEEKS.map(w => {
+                                                        const work = assignments.find(a => a.studentName === name && a.weekDate === w.date);
+                                                        const workStatus = work ? getHWStatus(w.date, work.createdAt) : "未完成";
+                                                        const stats = getPeerStats(w.date, name, overviewClass);
+                                                        const fbStatus = (stats.denominator === 0 || stats.numerator >= stats.denominator) ? "準時" : (stats.numerator > 0 ? "遲到" : "未完成");
+                                                        return (
+                                                            <td key={w.date} className="p-2">
+                                                                <div className={`text-[8px] rounded py-0.5 mb-1 ${workStatus==='準時'?'bg-emerald-100 text-emerald-600':workStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-100 text-rose-600'}`}>{workStatus}</div>
+                                                                <div className={`text-[8px] rounded py-0.5 ${fbStatus==='準時'?'bg-emerald-50 text-indigo-400':fbStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-50 text-rose-200'}`}>{stats.numerator}/{stats.denominator}</div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                     </main>
                 </div>
             );
-        };
-
+        }
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
