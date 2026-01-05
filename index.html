@@ -28,4 +28,175 @@
             projectId: "test-fee8d",
             storageBucket: "test-fee8d.firebasestorage.app",
             messagingSenderId: "415299571304",
-            appId: "1:415299571304:web
+            appId: "1:415299571304:web:07dff250c930d4f99035dd",
+            measurementId: "G-TXQ7NZ8LPT"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        window.firebaseEnv = { auth, db, appId: 'class-assignment-portal-v2', signInAnonymously, onAuthStateChanged, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const STUDENT_LIST = { "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"], "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"] };
+        const SEMESTER_WEEKS = [{ date: "1/4" }, { date: "1/11" }, { date: "1/18" }, { date: "1/25" }, { date: "2/1" }, { date: "2/8" }, { date: "2/15" }, { date: "2/22" }, { date: "3/1" }, { date: "3/8" }, { date: "3/15" }, { date: "3/22" }];
+        const Icon = ({ name, size = 20 }) => { useEffect(() => { lucide.createIcons(); }, []); return <i data-lucide={name} style={{ width: size, height: size }}></i>; };
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));
+            const [currentView, setCurrentView] = useState('upload');
+            const [assignments, setAssignments] = useState([]);
+            const [comments, setComments] = useState([]);
+
+            useEffect(() => {
+                const env = window.firebaseEnv;
+                env.signInAnonymously(env.auth);
+                env.onAuthStateChanged(env.auth, (u) => {
+                    setUser(u);
+                    setLoading(false);
+                    if (u) {
+                        env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'assignments'), (s) => setAssignments(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                        env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'comments'), (s) => {
+                            const data = s.docs.map(d => ({id:d.id, ...d.data()}));
+                            setComments(data.sort((a,b) => (a.createdAt?.seconds||0)-(b.createdAt?.seconds||0)));
+                        });
+                    }
+                });
+            }, []);
+
+            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-rose-500">🌸 正在載入粉紅空間...</div>;
+
+            if (!identity) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-rose-50 p-4">
+                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md text-center border-t-8 border-rose-400">
+                            <h1 className="text-3xl font-black text-rose-500 mb-2">Q1自媒體陪跑班</h1>
+                            <p className="text-rose-300 font-medium mb-8 uppercase tracking-widest text-xs">Pink Edition</p>
+                            <div className="grid grid-cols-2 gap-2 mb-4">
+                                {Object.keys(STUDENT_LIST).map(c => (
+                                    <button key={c} onClick={() => window.selCls = c} className="p-3 border-2 border-rose-100 rounded-xl font-bold text-rose-400 hover:border-rose-400 focus:bg-rose-500 focus:text-white transition">{c}</button>
+                                ))}
+                            </div>
+                            <select id="s-select" className="w-full p-4 border-2 border-rose-100 rounded-2xl mb-8 font-bold outline-none bg-rose-50 text-rose-600">
+                                <option value="">請點選姓名</option>
+                                {Object.values(STUDENT_LIST).flat().map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <button onClick={() => {
+                                const n = document.getElementById('s-select').value;
+                                if(n && window.selCls) {
+                                    const d = {name: n, class: window.selCls};
+                                    setIdentity(d);
+                                    localStorage.setItem('portal_identity', JSON.stringify(d));
+                                }
+                            }} className="w-full bg-rose-500 text-white p-4 rounded-2xl font-bold shadow-lg shadow-rose-200 hover:bg-rose-600 transition">進入粉紅教室</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col lg:flex-row">
+                    <nav className="w-full lg:w-64 bg-white border-r border-rose-100 p-6 flex flex-col shadow-sm">
+                        <div className="flex items-center gap-3 mb-10 p-3 bg-rose-50 rounded-2xl">
+                            <div className="bg-rose-500 p-2 rounded-lg text-white"><Icon name="user" /></div>
+                            <div className="text-left font-black text-sm text-rose-600">{identity.name}<br/><span className="text-[10px] text-rose-400 uppercase tracking-tighter">{identity.class}</span></div>
+                        </div>
+                        <div className="space-y-2 flex-1 font-bold">
+                            <button onClick={()=>setCurrentView('upload')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView==='upload'?'bg-rose-500 text-white shadow-md':'text-rose-300 hover:bg-rose-50'}`}><Icon name="cloud-upload" />作業上傳</button>
+                            <button onClick={()=>setCurrentView('peer')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView==='peer'?'bg-rose-500 text-white shadow-md':'text-rose-300 hover:bg-rose-50'}`}><Icon name="message-square" />同儕互評</button>
+                            <button onClick={()=>setCurrentView('overview')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView==='overview'?'bg-rose-500 text-white shadow-md':'text-rose-300 hover:bg-rose-50'}`}><Icon name="bar-chart-3" />進度總覽</button>
+                        </div>
+                        <button onClick={()=>{localStorage.clear(); location.reload();}} className="flex items-center gap-3 p-3 text-rose-200 font-bold hover:text-red-500 transition"><Icon name="log-out" />登出</button>
+                    </nav>
+
+                    <main className="flex-1 p-6 lg:p-10 overflow-y-auto">
+                        {currentView === 'upload' ? (
+                            <div className="max-w-4xl mx-auto space-y-6 text-left">
+                                <h2 className="text-2xl font-black text-rose-600 mb-8">作業上傳區</h2>
+                                {SEMESTER_WEEKS.map((w, i) => (
+                                    <div key={i} className="bg-white p-6 rounded-[32px] border border-rose-100 flex flex-col md:flex-row gap-6 shadow-sm">
+                                        <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center font-black text-rose-500 text-lg">W{i+1}</div>
+                                        <div className="flex-1">
+                                            <p className="text-rose-200 text-xs font-bold mb-2">{w.date}</p>
+                                            {assignments.filter(a => a.weekDate === w.date && a.studentName === identity.name).map(a => (
+                                                <div key={a.id} className="text-xs bg-rose-50 p-2 rounded-lg mb-2 flex justify-between border border-rose-100">
+                                                    <span className="truncate text-rose-600 underline font-bold">{a.url}</span>
+                                                    <button onClick={() => window.firebaseEnv.deleteDoc(window.firebaseEnv.doc(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'assignments', a.id))} className="text-rose-300 hover:text-red-500 px-2 font-bold text-lg">×</button>
+                                                </div>
+                                            ))}
+                                            <div className="flex gap-2 text-left">
+                                                <input id={`in-${w.date}`} className="flex-1 border-b border-rose-100 outline-none p-2 text-sm focus:border-rose-400" placeholder="貼上作業連結..."/>
+                                                <button onClick={async () => {
+                                                    const el = document.getElementById(`in-${w.date}`);
+                                                    if(!el.value) return;
+                                                    const env = window.firebaseEnv;
+                                                    await env.addDoc(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'assignments'), { studentName: identity.name, studentClass: identity.class, weekDate: w.date, url: el.value, submittedAt: env.serverTimestamp() });
+                                                    el.value = '';
+                                                }} className="bg-rose-500 text-white px-4 py-1 rounded-lg text-sm font-bold shadow-md hover:bg-rose-600">上傳</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : currentView === 'peer' ? (
+                            <div className="space-y-6 text-left">
+                                <h2 className="text-2xl font-black text-rose-600 mb-8 font-sans">同儕互評</h2>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {assignments.filter(a => a.studentClass === identity.class).map(a => (
+                                        <div key={a.id} className={`bg-white rounded-[40px] border border-rose-100 p-6 h-[450px] flex flex-col shadow-sm ${a.studentName === identity.name ? 'ring-2 ring-rose-400' : ''}`}>
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="font-black text-rose-700">{a.studentName} ({a.weekDate})</span>
+                                                <a href={a.url} target="_blank" className="bg-rose-50 text-rose-500 p-2 rounded-xl hover:bg-rose-500 hover:text-white transition"><Icon name="external-link" size={18} /></a>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto space-y-2 mb-4 scrollbar-hide">
+                                                {comments.filter(c => c.assignmentId === a.id).map((c, idx) => (
+                                                    <div key={idx} className="text-[11px] p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700">
+                                                        <span className="font-black text-rose-400">{c.author}: </span>{c.text}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input id={`cm-${a.id}`} className="flex-1 text-xs p-3 border border-rose-100 rounded-xl outline-none focus:border-rose-400" placeholder="寫點回饋..." />
+                                                <button onClick={async () => {
+                                                    const el = document.getElementById(`cm-${a.id}`);
+                                                    if(!el.value) return;
+                                                    const env = window.firebaseEnv;
+                                                    await env.addDoc(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'comments'), { assignmentId: a.id, author: identity.name, text: el.value, createdAt: env.serverTimestamp() });
+                                                    el.value = '';
+                                                }} className="bg-rose-500 text-white p-3 rounded-xl shadow-md hover:bg-rose-600"><Icon name="send" size={16} /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-rose-100 overflow-x-auto text-left">
+                                <h2 className="text-2xl font-black text-rose-600 mb-10 font-sans">全體進度總覽</h2>
+                                <table className="w-full text-center">
+                                    <thead><tr className="border-b border-rose-50"><th className="p-4 text-left text-xs text-rose-300 font-black">學員姓名</th>{SEMESTER_WEEKS.map(w=><th key={w.date} className="text-[10px] p-2 text-rose-300 font-bold">{w.date}</th>)}</tr></thead>
+                                    <tbody>
+                                        {Object.values(STUDENT_LIST).flat().map(name => (
+                                            <tr key={name} className="border-b border-rose-50 hover:bg-rose-50 transition group"><td className="p-4 text-left font-black text-sm text-rose-700">{name}</td>
+                                                {SEMESTER_WEEKS.map(w => (
+                                                    <td key={w.date} className="p-2"><div className={`w-5 h-5 mx-auto rounded-lg shadow-sm ${assignments.some(a=>a.studentName===name&&a.weekDate===w.date)?'bg-rose-500':'bg-rose-100'}`}></div></td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
