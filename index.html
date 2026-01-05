@@ -1,99 +1,165 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <meta http-equiv="Content-Style-Type" content="text/css">
-  <title></title>
-  <meta name="Generator" content="Cocoa HTML Writer">
-  <meta name="CocoaVersion" content="2575.7">
-  <style type="text/css">
-    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Q1自媒體陪跑班 - 學員系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+    </style>
 </head>
-<body>
-<p class="p1">&lt;!DOCTYPE html&gt;</p>
-<p class="p1">&lt;html lang="zh-Hant"&gt;</p>
-<p class="p1">&lt;head&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;Q1自媒體陪跑班 - 學員系統&lt;/title&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/react@18/umd/react.production.min.js"&gt;&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"&gt;&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/@babel/standalone/babel.min.js"&gt;&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script src="https://unpkg.com/lucide@latest"&gt;&lt;/script&gt;</p>
-<p class="p1">&lt;/head&gt;</p>
-<p class="p1">&lt;body class="bg-slate-50 text-slate-700"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="root"&gt;&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script type="module"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";</p>
-<p class="p1"><span class="Apple-converted-space">        </span>import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";</p>
-<p class="p1"><span class="Apple-converted-space">        </span>import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const firebaseConfig = {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>apiKey: "AIzaSyBlo6fIFqmEMyK3YTGBRg1S9Lw3OcZdczU",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>authDomain: "test-fee8d.firebaseapp.com",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>projectId: "test-fee8d",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>storageBucket: "test-fee8d.firebasestorage.app",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>messagingSenderId: "415299571304",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>appId: "1:415299571304:web:07dff250c930d4f99035dd",</p>
-<p class="p1"><span class="Apple-converted-space">            </span>measurementId: "G-TXQ7NZ8LPT"</p>
-<p class="p1"><span class="Apple-converted-space">        </span>};</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const app = initializeApp(firebaseConfig);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const auth = getAuth(app);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const db = getFirestore(app);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>window.firebaseEnv = { auth, db, appId: 'class-assignment-portal-v2', signInAnonymously, onAuthStateChanged, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc };</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;script type="text/babel"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const { useState, useEffect } = React;</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const STUDENT_LIST = { "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"], "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"] };</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const WEEKS = ["1/4", "1/11", "1/18", "1/25", "2/1", "2/8", "2/15", "2/22", "3/1", "3/8", "3/15", "3/22"];</p>
-<p class="p1"><span class="Apple-converted-space">        </span>const Icon = ({ name }) =&gt; { useEffect(() =&gt; lucide.createIcons(), []); return &lt;i data-lucide={name} style={{width:20, height:20}}&gt;&lt;/i&gt;; };</p>
-<p class="p1"><span class="Apple-converted-space">        </span>function App() {</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const [assignments, setAssignments] = useState([]);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>const [view, setView] = useState('upload');</p>
-<p class="p1"><span class="Apple-converted-space">            </span>useEffect(() =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                </span>const { auth, signInAnonymously, onAuthStateChanged, db, appId, collection, onSnapshot } = window.firebaseEnv;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>signInAnonymously(auth);</p>
-<p class="p1"><span class="Apple-converted-space">                </span>onAuthStateChanged(auth, (u) =&gt; {</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>if (u) onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (s) =&gt; setAssignments(s.docs.map(d =&gt; ({id:d.id, ...d.data()}))));</p>
-<p class="p1"><span class="Apple-converted-space">                </span>});</p>
-<p class="p1"><span class="Apple-converted-space">            </span>}, []);</p>
-<p class="p1"><span class="Apple-converted-space">            </span>if (!identity) return &lt;div className="h-screen flex items-center justify-center bg-slate-100 p-4"&gt;&lt;div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md text-center"&gt;&lt;h1 className="text-2xl font-bold mb-6 text-indigo-600"&gt;Q1 陪跑班&lt;/h1&gt;&lt;select id="s" className="w-full p-3 border rounded-xl mb-4 font-bold outline-none"&gt;&lt;option value=""&gt;請點選姓名&lt;/option&gt;{Object.values(STUDENT_LIST).flat().map(n=&gt;&lt;option key={n} value={n}&gt;{n}&lt;/option&gt;)}&lt;/select&gt;&lt;button onClick={()=&gt;{const n=document.getElementById('s').value; if(n){setIdentity({name:n}); localStorage.setItem('portal_identity',JSON.stringify({name:n}));}}} className="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold"&gt;進入&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>return (</p>
-<p class="p1"><span class="Apple-converted-space">                </span>&lt;div className="min-h-screen flex flex-col lg:flex-row"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>&lt;nav className="w-64 bg-white border-r p-6 space-y-4 shadow-sm"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>&lt;div className="font-bold text-indigo-600 mb-8 px-2"&gt;學員: {identity.name}&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;setView('upload')} className={`w-full flex items-center gap-2 p-3 rounded-xl font-bold ${view==='upload'?'bg-indigo-600 text-white':'text-slate-400'}`}&gt;&lt;Icon name="cloud-upload"/&gt;上傳&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;setView('all')} className={`w-full flex items-center gap-2 p-3 rounded-xl font-bold ${view==='all'?'bg-indigo-600 text-white':'text-slate-400'}`}&gt;&lt;Icon name="bar-chart-3"/&gt;總覽&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>&lt;button onClick={()=&gt;{localStorage.clear(); location.reload();}} className="w-full flex items-center gap-2 p-3 text-slate-400 hover:text-red-500 font-bold"&gt;&lt;Icon name="log-out"/&gt;登出&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/nav&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>&lt;main className="flex-1 p-6"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>{view==='upload' ? (</p>
-<p class="p1"><span class="Apple-converted-space">                            </span>&lt;div className="max-w-3xl mx-auto space-y-4"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                </span>{WEEKS.map(w =&gt; (</p>
-<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;div key={w} className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;div className="font-bold text-indigo-600 w-12"&gt;{w}&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;input id={`i-${w}`} className="flex-1 border-b p-2 outline-none text-sm" placeholder="貼上網址..."/&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                        </span>&lt;button onClick={async()=&gt;{const el=document.getElementById(`i-${w}`); if(el.value){await window.firebaseEnv.addDoc(window.firebaseEnv.collection(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'assignments'), {studentName:identity.name, weekDate:w, url:el.value, submittedAt:window.firebaseEnv.serverTimestamp()}); el.value='';}}} className="bg-indigo-600 text-white px-4 py-1 rounded-lg font-bold"&gt;送出&lt;/button&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                </span>))}</p>
-<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>) : (</p>
-<p class="p1"><span class="Apple-converted-space">                            </span>&lt;div className="bg-white p-6 rounded-3xl shadow-sm overflow-x-auto"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                </span>&lt;table className="w-full text-sm"&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;thead&gt;&lt;tr&gt;&lt;th className="p-2 text-left"&gt;姓名&lt;/th&gt;{WEEKS.map(w=&gt;&lt;th key={w} className="p-2 text-[10px]"&gt;{w}&lt;/th&gt;)}&lt;/tr&gt;&lt;/thead&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                    </span>&lt;tbody&gt;{Object.values(STUDENT_LIST).flat().map(n=&gt;(&lt;tr key={n} className="border-t"&gt;&lt;td className="p-2 font-bold"&gt;{n}&lt;/td&gt;{WEEKS.map(w=&gt;&lt;td key={w} className="p-2"&gt;&lt;div className={`w-3 h-3 mx-auto rounded-full ${assignments.some(a=&gt;a.studentName===n&amp;&amp;a.weekDate===w)?'bg-green-500':'bg-slate-100'}`}&gt;&lt;/div&gt;&lt;/td&gt;)}&lt;/tr&gt;))}&lt;/tbody&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                                </span>&lt;/table&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                            </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                        </span>)}</p>
-<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/main&gt;</p>
-<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
-<p class="p1"><span class="Apple-converted-space">            </span>);</p>
-<p class="p1"><span class="Apple-converted-space">        </span>}</p>
-<p class="p1"><span class="Apple-converted-space">        </span>ReactDOM.createRoot(document.getElementById('root')).render(&lt;App /&gt;);</p>
-<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
-<p class="p1">&lt;/body&gt;</p>
-<p class="p1">&lt;/html&gt;</p>
+<body class="bg-slate-50 text-slate-700">
+    <div id="root"></div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyBlo6fIFqmEMyK3YTGBRg1S9Lw3OcZdczU",
+            authDomain: "test-fee8d.firebaseapp.com",
+            projectId: "test-fee8d",
+            storageBucket: "test-fee8d.firebasestorage.app",
+            messagingSenderId: "415299571304",
+            appId: "1:415299571304:web:07dff250c930d4f99035dd",
+            measurementId: "G-TXQ7NZ8LPT"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        window.firebaseEnv = { auth, db, appId: 'class-assignment-portal-v2', signInAnonymously, onAuthStateChanged, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc };
+    </script>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const STUDENT_LIST = { "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"], "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"] };
+        const WEEKS = ["1/4", "1/11", "1/18", "1/25", "2/1", "2/8", "2/15", "2/22", "3/1", "3/8", "3/15", "3/22"];
+        const Icon = ({ name, size = 20 }) => { useEffect(() => { lucide.createIcons(); }, []); return <i data-lucide={name} style={{ width: size, height: size }}></i>; };
+        function App() {
+            const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));
+            const [assignments, setAssignments] = useState([]);
+            const [comments, setComments] = useState([]);
+            const [view, setView] = useState('upload');
+            const [loading, setLoading] = useState(true);
+            useEffect(() => {
+                const env = window.firebaseEnv;
+                if (!env) return;
+                env.signInAnonymously(env.auth);
+                env.onAuthStateChanged(env.auth, (u) => {
+                    setLoading(false);
+                    if (u) {
+                        env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'assignments'), (s) => setAssignments(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                        env.onSnapshot(env.collection(env.db, 'artifacts', env.appId, 'public', 'data', 'comments'), (s) => setComments(s.docs.map(d => ({id: d.id, ...d.data()}))));
+                    }
+                });
+            }, []);
+            if (loading) return <div className="h-screen flex items-center justify-center font-black text-indigo-600">連線中...</div>;
+            if (!identity) {
+                return (
+                    <div className="h-screen flex items-center justify-center bg-slate-50 p-4">
+                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-sm text-center border">
+                            <h1 className="text-3xl font-black text-indigo-600 mb-8">陪跑班系統</h1>
+                            <select id="s-name" className="w-full p-4 border-2 rounded-2xl mb-6 font-bold bg-slate-50">
+                                <option value="">請選擇姓名</option>
+                                {Object.values(STUDENT_LIST).flat().map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                            <button onClick={() => {
+                                const n = document.getElementById('s-name').value;
+                                if(n) { setIdentity({name: n}); localStorage.setItem('portal_identity', JSON.stringify({name: n})); }
+                            }} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">進入系統</button>
+                        </div>
+                    </div>
+                );
+            }
+            return (
+                <div className="min-h-screen flex flex-col lg:flex-row text-left font-sans">
+                    <nav className="w-full lg:w-64 bg-white border-r p-6 space-y-4 shadow-sm">
+                        <div className="font-black text-indigo-600 mb-8 p-3 bg-slate-50 rounded-xl">學員: {identity.name}</div>
+                        <button onClick={() => setView('upload')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold ${view==='upload'?'bg-indigo-600 text-white shadow-md':'text-slate-400'}`}><Icon name="cloud-upload" />作業上傳</button>
+                        <button onClick={() => setView('peer')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold ${view==='peer'?'bg-indigo-600 text-white shadow-md':'text-slate-400'}`}><Icon name="message-square" />同儕互評</button>
+                        <button onClick={() => setView('all')} className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold ${view==='all'?'bg-indigo-600 text-white shadow-md':'text-slate-400'}`}><Icon name="bar-chart-3" />進度總覽</button>
+                        <button onClick={() => {localStorage.clear(); location.reload();}} className="w-full flex items-center gap-3 p-3 text-slate-400 font-bold hover:text-red-500 transition"><Icon name="log-out" />登出</button>
+                    </nav>
+                    <main className="flex-1 p-6 lg:p-10 overflow-y-auto bg-slate-50">
+                        {view === 'upload' ? (
+                            <div className="max-w-3xl mx-auto space-y-6">
+                                <h2 className="text-2xl font-black mb-6">作業上傳</h2>
+                                {WEEKS.map((w, i) => (
+                                    <div key={i} className="bg-white p-6 rounded-2xl border flex items-center gap-6 shadow-sm">
+                                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center font-black text-indigo-600">W{i+1}</div>
+                                        <div className="flex-1">
+                                            {assignments.filter(a => a.weekDate === w && a.studentName === identity.name).map(a => (
+                                                <div key={a.id} className="text-xs bg-indigo-50 p-2 rounded-lg mb-2 flex justify-between border border-indigo-100">
+                                                    <span className="truncate text-indigo-700 underline font-bold">{a.url}</span>
+                                                    <button onClick={() => window.firebaseEnv.deleteDoc(window.firebaseEnv.doc(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'assignments', a.id))} className="text-red-400 font-bold px-2 text-lg">×</button>
+                                                </div>
+                                            ))}
+                                            <div className="flex gap-2">
+                                                <input id={`in-${w}`} className="flex-1 border-b outline-none p-2 text-sm focus:border-indigo-500" placeholder="貼上網址..."/>
+                                                <button onClick={async () => {
+                                                    const el = document.getElementById(`in-${w}`);
+                                                    if(!el.value) return;
+                                                    await window.firebaseEnv.addDoc(window.firebaseEnv.collection(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'assignments'), { studentName: identity.name, weekDate: w, url: el.value, submittedAt: window.firebaseEnv.serverTimestamp() });
+                                                    el.value = '';
+                                                }} className="bg-indigo-600 text-white px-4 py-1 rounded-lg text-sm font-bold shadow-md">上傳</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : view === 'peer' ? (
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {assignments.map(a => (
+                                    <div key={a.id} className="bg-white rounded-[32px] border p-6 h-[450px] flex flex-col shadow-sm">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="font-black text-slate-800">{a.studentName} ({a.weekDate})</span>
+                                            <a href={a.url} target="_blank" className="bg-indigo-50 text-indigo-600 p-2 rounded-xl"><Icon name="external-link" size={18} /></a>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto space-y-2 mb-4 scrollbar-hide">
+                                            {comments.filter(c => c.assignmentId === a.id).map((c, idx) => (
+                                                <div key={idx} className="text-[11px] p-3 rounded-2xl bg-slate-50 border border-slate-100 shadow-inner">
+                                                    <span className="font-black text-indigo-600">{c.author}: </span>{c.text}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex gap-2 text-left">
+                                            <input id={`cm-${a.id}`} className="flex-1 text-xs p-3 border rounded-xl outline-none" placeholder="輸入回饋..." />
+                                            <button onClick={async () => {
+                                                const el = document.getElementById(`cm-${a.id}`);
+                                                if(!el.value) return;
+                                                await window.firebaseEnv.addDoc(window.firebaseEnv.collection(window.firebaseEnv.db, 'artifacts', window.firebaseEnv.appId, 'public', 'data', 'comments'), { assignmentId: a.id, author: identity.name, text: el.value, createdAt: window.firebaseEnv.serverTimestamp() });
+                                                el.value = '';
+                                            }} className="bg-indigo-600 text-white p-3 rounded-xl shadow-md"><Icon name="send" size={16} /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 overflow-x-auto">
+                                <table className="w-full text-center border-collapse">
+                                    <thead><tr className="border-b"><th className="p-4 text-left font-black text-slate-400">學員姓名</th>{WEEKS.map(w => <th key={w} className="text-[10px] p-2 text-slate-400">{w}</th>)}</tr></thead>
+                                    <tbody>
+                                        {Object.values(STUDENT_LIST).flat().map(name => (
+                                            <tr key={name} className="border-b hover:bg-slate-50 transition group"><td className="p-4 text-left font-bold text-sm text-slate-700">{name}</td>
+                                                {WEEKS.map(w => (
+                                                    <td key={w} className="p-2"><div className={`w-5 h-5 mx-auto rounded-lg shadow-sm transition-all ${assignments.some(a=>a.studentName===name&&a.weekDate===w)?'bg-green-500 scale-110':'bg-slate-200'}`}></div></td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
