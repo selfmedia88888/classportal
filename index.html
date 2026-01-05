@@ -126,6 +126,7 @@
                 return commentDate > deadlineDate ? "遲到" : "準時";
             };
 
+            // 修正版 PeerStats 計算，支援動態傳入班級
             const getPeerStats = (weekDate, userName, userClass) => {
                 const timelyTargets = assignments.filter(a =>
                     a.weekDate === weekDate && a.studentClass === userClass && a.studentName !== userName && getHWStatus(a.weekDate, a.createdAt) === "準時"
@@ -149,10 +150,10 @@
                             <h1 className="text-3xl text-slate-800 mb-6 italic underline decoration-indigo-200">Q1 Classroom</h1>
                             <div className="grid grid-cols-2 gap-2 mb-4">
                                 {["早班", "晚班"].map(c => (
-                                    <button key={c} onClick={() => window.selCls = c} className="p-3 border-2 rounded-2xl border-slate-100 text-slate-400 focus:bg-indigo-600 focus:text-white transition">{c}</button>
+                                    <button key={c} onClick={() => window.selCls = c} className="p-3 border-2 rounded-2xl border-slate-100 text-slate-400 focus:bg-rose-400 focus:text-white transition">{c}</button>
                                 ))}
                             </div>
-                            <select id="name-sel" className="w-full p-4 border-2 border-slate-100 rounded-2xl mb-8 outline-none bg-slate-50">
+                            <select id="name-sel" className="w-full p-4 border-2 border-slate-100 rounded-2xl mb-8 outline-none bg-slate-50 text-slate-700">
                                 <option value="">選取姓名</option>
                                 {Object.values(STUDENT_LIST).flat().map(n => <option key={n} value={n}>{n}</option>)}
                             </select>
@@ -200,7 +201,45 @@
                             }} className="p-2 text-slate-200 hover:text-indigo-600 transition opacity-0 group-hover:opacity-100"><Icon name="settings" size={16} /></button>
                         </div>
 
-                        {currentView === 'upload' ? (
+                        {currentView === 'overview' ? (
+                            <div className="space-y-8">
+                                {/* 班級切換按鈕 */}
+                                <div className="flex gap-4 p-2 bg-white rounded-3xl card-shadow inline-flex border border-slate-100">
+                                    {["早班", "晚班"].map(c => (
+                                        <button key={c} onClick={()=>setOverviewClass(c)} className={`px-10 py-3 rounded-2xl transition ${overviewClass === c ? 'blue-gradient text-white shadow-lg' : 'text-slate-300 hover:text-indigo-500'}`}>{c}</button>
+                                    ))}
+                                </div>
+                                <div className="bg-white rounded-[40px] card-shadow border border-slate-100 overflow-hidden overflow-x-auto">
+                                    <table className="min-w-[900px] text-center">
+                                        <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100">
+                                                <th className="p-6 text-left text-xs text-indigo-400 sticky left-0 bg-white border-r">學員姓名</th>
+                                                {SEMESTER_WEEKS.map(w => <th key={w.date} className="p-4 text-[10px] text-slate-400">{w.date}<br/><span className="text-[8px] opacity-40">HW | FB</span></th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {STUDENT_LIST[overviewClass].map(name => (
+                                                <tr key={name} className="border-b border-slate-50 hover:bg-slate-50 transition">
+                                                    <td className="p-4 text-sm text-left text-slate-600 sticky left-0 bg-white border-r">{name}</td>
+                                                    {SEMESTER_WEEKS.map(w => {
+                                                        const work = assignments.find(a => a.studentName === name && a.weekDate === w.date);
+                                                        const workStatus = work ? getHWStatus(w.date, work.createdAt) : "未完成";
+                                                        const stats = getPeerStats(w.date, name, overviewClass);
+                                                        const fbStatus = (stats.denominator === 0 || stats.numerator >= stats.denominator) ? "準時" : (stats.numerator > 0 ? "遲到" : "未完成");
+                                                        return (
+                                                            <td key={w.date} className="p-2">
+                                                                <div className={`text-[8px] rounded py-0.5 mb-1 ${workStatus==='準時'?'bg-emerald-100 text-emerald-600':workStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-100 text-rose-600'}`}>{workStatus}</div>
+                                                                <div className={`text-[8px] rounded py-0.5 ${fbStatus==='準時'?'bg-emerald-50 text-indigo-400':fbStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-50 text-rose-200'}`}>{stats.numerator}/{stats.denominator}</div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : currentView === 'upload' ? (
                             <div className="max-w-4xl mx-auto space-y-6">
                                 <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic">Weekly Submission</h2>
                                 {SEMESTER_WEEKS.map((w, i) => (
@@ -236,7 +275,7 @@
                             </div>
                         ) : currentView === 'peer' ? (
                             <div className="max-w-6xl mx-auto space-y-6">
-                                {/* 評價統計儀表板 Dashboard */}
+                                {/* 評價進度儀表板 */}
                                 {(() => {
                                     const stats = getPeerStats(selectedPeerDate, identity.name, identity.class);
                                     const percent = stats.denominator > 0 ? (stats.numerator / stats.denominator) * 100 : 0;
@@ -257,42 +296,37 @@
                                                 <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
                                                     <div className="h-full blue-gradient progress-bar" style={{ width: `${percent}%` }}></div>
                                                 </div>
-                                                {percent === 100 ? (
+                                                {percent === 100 && stats.denominator > 0 ? (
                                                     <div className="mt-4 text-emerald-500 flex items-center gap-2 animate-bounce">
-                                                        <Icon name="party-popper" /> 你太棒了！本週評價已全數完成！
+                                                        你太棒了！本週評價已全數完成！🚀
                                                     </div>
                                                 ) : percent >= 80 ? (
-                                                    <div className="mt-4 text-indigo-500 flex items-center gap-2">
-                                                        <Icon name="zap" /> 你很棒，快完成了！加油！
-                                                    </div>
+                                                    <div className="mt-4 text-indigo-500">你很棒，快完成了！加油！✨</div>
                                                 ) : stats.remainingNames.length > 0 ? (
                                                     <div className="mt-4 flex flex-wrap gap-2 items-center">
                                                         <span className="text-xs text-slate-400">待評價同學：</span>
-                                                        {stats.remainingNames.map(n => (
-                                                            <span key={n} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] border border-amber-100">@{n}</span>
-                                                        ))}
+                                                        {stats.remainingNames.map(n => <span key={n} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] border border-amber-100">@{n}</span>)}
                                                     </div>
                                                 ) : null}
                                             </div>
                                             <div className="shrink-0">
                                                  <select value={selectedPeerDate} onChange={(e)=>setSelectedPeerDate(e.target.value)} className="bg-slate-50 p-4 rounded-2xl shadow-inner outline-none border border-slate-100 text-indigo-600 font-black">
-                                                    {SEMESTER_WEEKS.map(w => <option key={w.date} value={w.date}>週次：{w.date}</option>)}
+                                                    {SEMESTER_WEEKS.map(w => <option key={w.date} value={w.date}>{w.date}</option>)}
                                                 </select>
                                             </div>
                                         </div>
                                     );
                                 })()}
-
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {assignments.filter(a => a.weekDate === selectedPeerDate && a.studentClass === identity.class).map(a => {
                                         const isSelf = a.studentName === identity.name;
-                                        const hasCommented = comments.some(c => c.assignmentId === a.id && c.author === identity.name);
+                                        const hasDone = comments.some(c => c.assignmentId === a.id && c.author === identity.name);
                                         return (
-                                            <div key={a.id} className={`bg-white rounded-[40px] p-6 card-shadow flex flex-col h-[480px] border-2 transition ${isSelf ? 'border-indigo-500 ring-8 ring-indigo-50' : hasCommented ? 'border-emerald-100' : 'border-transparent'}`}>
+                                            <div key={a.id} className={`bg-white rounded-[40px] p-6 card-shadow flex flex-col h-[480px] border-2 transition ${isSelf ? 'border-indigo-500 ring-8 ring-indigo-50' : hasDone ? 'border-emerald-100' : 'border-transparent'}`}>
                                                 <div className="flex justify-between items-start mb-6 shrink-0 text-left">
                                                     <div className="flex items-center gap-2">
                                                         <div className="text-slate-800 text-lg">{a.studentName}</div>
-                                                        {hasCommented && !isSelf && <span className="text-emerald-500"><Icon name="check-circle-2" size={16}/></span>}
+                                                        {hasDone && !isSelf && <span className="text-emerald-500 font-black text-xs">✓ 已評</span>}
                                                     </div>
                                                     <a href={a.url} target="_blank" className="px-5 py-2 bg-indigo-50 text-indigo-600 rounded-2xl text-xs flex items-center gap-1 hover:bg-indigo-600 hover:text-white transition shadow-sm">觀看 <Icon name="external-link" size={12} /></a>
                                                 </div>
@@ -306,7 +340,7 @@
                                                                     <span className={`text-[7px] px-1 rounded-sm font-black ${fbStatus==='準時'?'bg-emerald-100 text-emerald-600':'bg-amber-100 text-amber-600'}`}>{fbStatus}</span>
                                                                 </div>
                                                                 <div className="text-slate-600 font-bold">{c.text}</div>
-                                                                {c.author === identity.name && <button onClick={async ()=> { if(confirm("刪除？")) await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments', c.id)); }} className="opacity-0 group-hover:opacity-100 absolute right-2 top-2 text-slate-300 hover:text-red-500">×</button>}
+                                                                {c.author === identity.name && <button onClick={async ()=> { if(confirm("刪除？")) await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments', c.id)); }} className="opacity-0 group-hover:opacity-100 absolute right-2 top-2 text-slate-300 hover:text-red-500 font-bold">×</button>}
                                                             </div>
                                                         );
                                                     })}
@@ -319,23 +353,23 @@
                                                             await window.fb.addDoc(window.fb.collection(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments'), { assignmentId: a.id, author: identity.name, text: el.value, createdAt: window.fb.serverTimestamp() });
                                                             el.value = '';
                                                         }
-                                                    }} className="bg-slate-800 text-white p-3 rounded-xl shadow-md"><Icon name="send" size={14} /></button>
+                                                    }} className="bg-slate-800 text-white p-2 px-3 rounded-xl shadow-md"><Icon name="send" size={14} /></button>
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
                             </div>
-                        ) : currentView === 'personal' ? (
+                        ) : (
                             <div className="max-w-4xl mx-auto space-y-6">
                                 <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic">Received Feedback</h2>
                                 {assignments.filter(a => a.studentName === identity.name).sort((a,b)=> (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).map(a => (
                                     <div key={a.id} className="bg-white p-8 rounded-[40px] card-shadow border border-slate-100 mb-6">
-                                        <div className="text-indigo-600 italic mb-6">Week {a.weekDate} 作品回饋</div>
+                                        <div className="text-indigo-600 italic mb-6 border-b border-slate-50 pb-4">Week {a.weekDate} 作品回饋</div>
                                         <div className="space-y-4 text-left">
                                             {comments.filter(c => c.assignmentId === a.id && c.author !== identity.name).map((c, idx) => (
                                                 <div key={idx} className="flex gap-4 items-start">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 text-xs shadow-sm">{c.author[0]}</div>
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 text-xs font-black">{c.author[0]}</div>
                                                     <div className="bg-slate-50 p-4 rounded-[24px] flex-1 border border-slate-100">
                                                         <div className="text-[9px] text-indigo-400 mb-1">{c.author}</div>
                                                         <div className="text-sm text-slate-600">{c.text}</div>
@@ -346,43 +380,6 @@
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                        ) : (
-                            <div className="space-y-8 font-black">
-                                <div className="flex gap-4 p-2 bg-white rounded-3xl card-shadow inline-flex border border-slate-100">
-                                    {["早班", "晚班"].map(c => (
-                                        <button key={c} onClick={()=>setOverviewClass(c)} className={`px-10 py-3 rounded-2xl transition ${overviewClass === c ? 'blue-gradient text-white shadow-lg' : 'text-slate-300'}`}>{c}</button>
-                                    ))}
-                                </div>
-                                <div className="bg-white rounded-[40px] card-shadow border border-slate-100 overflow-hidden overflow-x-auto">
-                                    <table className="min-w-[900px] text-center">
-                                        <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                                <th className="p-6 text-left text-xs text-indigo-400 sticky left-0 bg-white border-r">學員姓名</th>
-                                                {SEMESTER_WEEKS.map(w => <th key={w.date} className="p-4 text-[10px] text-slate-400">{w.date}<br/><span className="text-[8px] opacity-40">HW | FB</span></th>)}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {STUDENT_LIST[overviewClass].map(name => (
-                                                <tr key={name} className="border-b border-slate-50 hover:bg-slate-50 transition">
-                                                    <td className="p-4 text-sm text-left text-slate-600 sticky left-0 bg-white border-r">{name}</td>
-                                                    {SEMESTER_WEEKS.map(w => {
-                                                        const work = assignments.find(a => a.studentName === name && a.weekDate === w.date);
-                                                        const workStatus = work ? getHWStatus(w.date, work.createdAt) : "未完成";
-                                                        const stats = getPeerStats(w.date, name, overviewClass);
-                                                        const fbStatus = (stats.denominator === 0 || stats.numerator >= stats.denominator) ? "準時" : (stats.numerator > 0 ? "遲到" : "未完成");
-                                                        return (
-                                                            <td key={w.date} className="p-2">
-                                                                <div className={`text-[8px] rounded py-0.5 mb-1 ${workStatus==='準時'?'bg-emerald-100 text-emerald-600':workStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-100 text-rose-600'}`}>{workStatus}</div>
-                                                                <div className={`text-[8px] rounded py-0.5 ${fbStatus==='準時'?'bg-emerald-50 text-indigo-400':fbStatus==='遲到'?'bg-amber-100 text-amber-600':'bg-rose-50 text-rose-200'}`}>{stats.numerator}/{stats.denominator}</div>
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
                             </div>
                         )}
                     </main>
