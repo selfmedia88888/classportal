@@ -112,11 +112,11 @@
             };
 
             const deleteItem = async (type, id) => {
-                if(!confirm("確定要刪除嗎？")) return;
+                if(!confirm("確定要刪除這項內容嗎？此動作無法復原。")) return;
                 try {
                     const env = window.firebaseEnv;
                     await env.deleteDoc(env.doc(env.db, 'artifacts', env.appId, 'public', 'data', type, id));
-                    setToast({ message: "刪除成功", type: "success" });
+                    setToast({ message: "已刪除", type: "success" });
                 } catch (e) { setToast({ message: "刪除失敗", type: "error" }); }
             };
 
@@ -131,7 +131,7 @@
                         submittedAt: env.serverTimestamp(), isLate: isAssignmentLate(date)
                     });
                     el.value = '';
-                    setToast({ message: "上傳成功！", type: "success" });
+                    setToast({ message: "作業上傳成功！", type: "success" });
                 } catch (e) { setToast({ message: "上傳失敗", type: "error" }); } finally { setUploading(null); }
             };
 
@@ -167,14 +167,14 @@
                 return (
                     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
                         <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border-t-8 border-indigo-600 text-left">
-                            <h1 className="text-3xl font-black text-indigo-600 mb-6 text-center font-sans">Q1自媒體陪跑班</h1>
+                            <h1 className="text-3xl font-black text-indigo-600 mb-6 text-center">Q1自媒體陪跑班</h1>
                             <div className="grid grid-cols-2 gap-2 mb-6">
                                 {Object.keys(STUDENT_LIST).map(c => (
-                                    <button key={c} onClick={() => setSelectedClass(c)} className={`p-3 border-2 rounded-xl font-bold transition ${selectedClass === c ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg' : 'border-slate-100 text-slate-400 hover:bg-slate-50'}`}>{c}</button>
+                                    <button key={c} onClick={() => setSelectedClass(c)} className={`p-3 border-2 rounded-xl font-bold transition ${selectedClass === c ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg' : 'border-slate-100 text-slate-400'}`}>{c}</button>
                                 ))}
                             </div>
                             <select id="s-select" className="w-full p-4 border-2 border-slate-100 rounded-2xl mb-8 font-bold outline-none bg-slate-50 text-sm" disabled={!selectedClass}>
-                                <option value="">{selectedClass ? "請點選姓名" : "請先選擇班級"}</option>
+                                <option value="">{selectedClass ? "點選您的姓名" : "請先選擇班級"}</option>
                                 {selectedClass && STUDENT_LIST[selectedClass].map(n => <option key={n} value={n}>{n}</option>)}
                             </select>
                             <button onClick={() => {
@@ -184,7 +184,7 @@
                                     setIdentity(d);
                                     localStorage.setItem('portal_identity', JSON.stringify(d));
                                 }
-                            }} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg">進入教室</button>
+                            }} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg">進入教室系統</button>
                         </div>
                     </div>
                 );
@@ -203,7 +203,7 @@
                             <button onClick={()=>setCurrentView('peer')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView==='peer'?'bg-indigo-600 text-white shadow-md':'text-slate-400'}`}><Icon name="message-square" />同儕互評</button>
                             <button onClick={()=>setCurrentView('overview')} className={`w-full flex items-center gap-3 p-3 rounded-xl transition ${currentView==='overview'?'bg-indigo-600 text-white shadow-md':'text-slate-400'}`}><Icon name="bar-chart-3" />進度總覽</button>
                         </div>
-                        <button onClick={()=>{localStorage.clear(); location.reload();}} className="flex items-center gap-3 p-3 text-slate-400 font-bold hover:text-red-500 transition"><Icon name="log-out" />登出</button>
+                        <button onClick={()=>{localStorage.clear(); location.reload();}} className="flex items-center gap-3 p-3 text-slate-400 font-bold hover:text-red-500 transition"><Icon name="log-out" />登出系統</button>
                     </nav>
 
                     <main className="flex-1 p-6 lg:p-10 overflow-y-auto">
@@ -222,8 +222,8 @@
                                                 </div>
                                             ))}
                                             <div className="flex gap-2 mt-4">
-                                                <input id={`in-${w.date}`} className="flex-1 border-b border-slate-100 outline-none p-2 text-sm focus:border-indigo-500 bg-transparent" placeholder="貼上作業連結..." />
-                                                <button onClick={() => handleUpload(w.date)} disabled={uploading === w.date} className={`px-6 py-2 rounded-xl text-sm font-bold shadow-md transition ${uploading === w.date ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95'}`}>
+                                                <input id={`in-${w.date}`} className="flex-1 border-b border-slate-100 outline-none p-2 text-sm focus:border-indigo-500 bg-transparent" placeholder="貼上 IG 作業連結..." />
+                                                <button onClick={() => handleUpload(w.date)} disabled={uploading === w.date} className={`px-6 py-2 rounded-xl text-sm font-bold shadow-md transition ${uploading === w.date ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
                                                     {uploading === w.date ? '中...' : '上傳'}
                                                 </button>
                                             </div>
@@ -250,7 +250,7 @@
                                                 ))}
                                             </div>
                                             <div className="flex gap-2 pt-2 border-t border-slate-50">
-                                                <input id={`cm-${a.id}`} className="flex-1 text-xs p-3 border border-slate-100 rounded-xl outline-none focus:border-indigo-400 shadow-sm" placeholder="給同學一點回饋..." />
+                                                <input id={`cm-${a.id}`} className="flex-1 text-xs p-3 border border-slate-100 rounded-xl outline-none focus:border-indigo-400 shadow-sm" placeholder="給同學一點鼓勵吧..." />
                                                 <button onClick={async () => {
                                                     const el = document.getElementById(`cm-${a.id}`);
                                                     if(!el.value) return;
@@ -278,8 +278,9 @@
                                                 {s.weeklySummary.map((sum, i) => (
                                                     <td key={i} className="p-4">
                                                         <div className="flex justify-center gap-1.5">
-                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm text-white ${sum.assignStatus === '準時' ? 'bg-green-500' : sum.assignStatus === '遲交' ? 'bg-orange-500' : 'bg-red-400'}`}>交</div>
-                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm text-white ${sum.commentStatus === '準時' ? 'bg-green-500' : sum.commentStatus === '遲評' ? 'bg-orange-500' : sum.commentStatus === '免評' ? 'bg-slate-100 !text-slate-300' : 'bg-red-400'}`}>評</div>
+                                                            {/* 遲交/遲評改為藍色 (bg-blue-500) */}
+                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm text-white ${sum.assignStatus === '準時' ? 'bg-green-500' : sum.assignStatus === '遲交' ? 'bg-blue-500' : 'bg-red-400'}`}>交</div>
+                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shadow-sm text-white ${sum.commentStatus === '準時' ? 'bg-green-500' : sum.commentStatus === '遲評' ? 'bg-blue-500' : sum.commentStatus === '免評' ? 'bg-slate-100 !text-slate-300' : 'bg-red-400'}`}>評</div>
                                                         </div>
                                                     </td>
                                                 ))}
@@ -287,10 +288,9 @@
                                         ))}
                                     </tbody>
                                 </table>
-                                {/* 補回底部狀態圖例說明 */}
                                 <div className="mt-10 pt-6 border-t border-slate-50 flex flex-wrap justify-center gap-x-8 gap-y-4">
                                     <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-green-500"></div><span className="text-xs font-bold text-slate-500">準時</span></div>
-                                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-500"></div><span className="text-xs font-bold text-slate-500">遲交 / 遲評</span></div>
+                                    <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-blue-500"></div><span className="text-xs font-bold text-slate-500">遲交 / 遲評</span></div>
                                     <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-400"></div><span className="text-xs font-bold text-slate-500">未完成</span></div>
                                     <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-slate-100 border border-slate-200"></div><span className="text-xs font-bold text-slate-500">無須執行</span></div>
                                 </div>
