@@ -9,22 +9,21 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-700">
+<body class="bg-slate-50 text-slate-700 text-left">
     <div id="root"></div>
 
     <script type="module">
-        // 初始化 Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+        // Firebase 配置
         const firebaseConfig = {
             apiKey: "AIzaSyBlo6fIFqmEMyK3YTGBRg1S9Lw3OcZdczU",
             authDomain: "test-fee8d.firebaseapp.com",
@@ -40,15 +39,12 @@
         const db = getFirestore(app);
         const appId = 'class-assignment-portal-v2';
 
-        // 將 Firebase 實例掛載到 window，讓 Babel 下的 React 元件可以使用
-        window.firebaseStore = { db, auth, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc, appId };
+        window.fbEnv = { auth, db, appId, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc };
     </script>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
-        const { db, auth, collection, doc, onSnapshot, addDoc, serverTimestamp, deleteDoc, appId } = window.firebaseStore;
 
-        // --- 資料定義 ---
         const STUDENT_LIST = {
             "早班": ["澄貞", "賴憲", "珮綾", "若蕎", "怡文", "雅婷", "靖崴", "Emily", "Lu", "江江", "Gina"],
             "晚班": ["阿文", "阿廼", "英愉", "謝慈", "佩錡", "辰芮", "劉昊", "秝桀", "涵傑", "99", "若若", "凱陞", "玟淯", "靜靜"]
@@ -63,60 +59,46 @@
             { date: "3/15", deadlineWeek: "3/22" }, { date: "3/22", deadlineWeek: "3/22" }
         ];
 
-        // --- 圖標元件 ---
-        const Icon = ({ name, size = 20 }) => {
+        const Icon = ({ name, size = 20, className = "" }) => {
             useEffect(() => { lucide.createIcons(); }, [name]);
-            return <i data-lucide={name} style={{ width: size, height: size }}></i>;
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
         };
 
-        // --- 主程式 App ---
         const App = () => {
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
             const [currentView, setCurrentView] = useState('upload');
             const [assignments, setAssignments] = useState([]);
             const [comments, setComments] = useState([]);
-            const [identity, setIdentity] = useState(null);
+            const [identity, setIdentity] = useState(JSON.parse(localStorage.getItem('portal_identity')));
 
             useEffect(() => {
-                const unsubscribe = window.firebaseStore.auth.onAuthStateChanged(async (u) => {
-                    if (!u) {
-                        try { await lucide.createIcons(); await window.firebaseStore.auth.signInAnonymously(window.firebaseStore.auth.getAuth()); } catch(e){}
+                const interval = setInterval(() => {
+                    if (window.fbEnv) {
+                        const { auth, db, appId, collection, onSnapshot } = window.fbEnv;
+                        import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js").then((mod) => {
+                            mod.signInAnonymously(auth);
+                            mod.onAuthStateChanged(auth, (u) => {
+                                setUser(u);
+                                setLoading(false);
+                                if (u) {
+                                    onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (s) => setAssignments(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                                    onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), (s) => {
+                                        const data = s.docs.map(d => ({id:d.id, ...d.data()}));
+                                        setComments(data.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
+                                    });
+                                }
+                            });
+                        });
+                        clearInterval(interval);
                     }
-                    setUser(u);
-                    setLoading(false);
-                });
-                return () => unsubscribe();
+                }, 500);
             }, []);
-
-            useEffect(() => {
-                const saved = localStorage.getItem('portal_identity');
-                if (saved) setIdentity(JSON.parse(saved));
-            }, []);
-
-            useEffect(() => {
-                if (!user) return;
-                const unsubAssign = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), (s) => {
-                    setAssignments(s.docs.map(d => ({ id: d.id, ...d.data() })));
-                });
-                const unsubComments = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), (s) => {
-                    const data = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setComments(data.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)));
-                });
-                return () => { unsubAssign(); unsubComments(); };
-            }, [user]);
-
-            const handleLogin = (name, className) => {
-                const idData = { name, class: className };
-                setIdentity(idData);
-                localStorage.setItem('portal_identity', JSON.stringify(idData));
-            };
 
             const isAssignmentLate = (weekDateStr) => {
-                const submitDate = new Date();
                 const [m, d] = weekDateStr.split('/').map(Number);
                 const deadline = new Date(new Date().getFullYear(), m - 1, d, 20, 0, 0);
-                return submitDate > deadline;
+                return new Date() > deadline;
             };
 
             const getCommentDeadline = (weekDateStr, className) => {
@@ -130,6 +112,7 @@
 
             const submitAssignment = async (date, url) => {
                 if (!url.trim() || !identity || !user) return;
+                const { db, appId, collection, addDoc, serverTimestamp } = window.fbEnv;
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'assignments'), {
                     studentName: identity.name, studentClass: identity.class, weekDate: date, url,
                     submittedAt: serverTimestamp(), isLate: isAssignmentLate(date), userId: user.uid
@@ -137,13 +120,16 @@
             };
 
             const deleteAssignment = async (id) => {
+                if(!confirm("確定要刪除這份作業嗎？")) return;
+                const { db, appId, doc, deleteDoc } = window.fbEnv;
                 await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'assignments', id));
             };
 
             const postComment = async (assignmentId, text, weekDate, targetStudentName) => {
                 if (!text.trim() || !user || !identity) return;
-                const isSelfComment = targetStudentName === identity.name;
+                const { db, appId, collection, addDoc, serverTimestamp } = window.fbEnv;
                 const deadline = getCommentDeadline(weekDate, identity.class);
+                const isSelfComment = targetStudentName === identity.name;
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), {
                     assignmentId, author: identity.name, authorClass: identity.class, text, weekDate,
                     createdAt: serverTimestamp(), isLate: isSelfComment ? false : (new Date() > deadline),
@@ -151,22 +137,31 @@
                 });
             };
 
-            if (loading) return <div className="flex h-screen items-center justify-center font-bold text-indigo-600">連線中...</div>;
+            const deleteComment = async (id) => {
+                if(!confirm("確定要刪除這則回饋嗎？")) return;
+                const { db, appId, doc, deleteDoc } = window.fbEnv;
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id));
+            };
+
+            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-indigo-600 text-lg italic">系統載入中...</div>;
 
             if (!identity) {
                 return (
-                    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md text-center">
+                    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border border-slate-100 text-center">
                             <h1 className="text-3xl font-black text-indigo-600 mb-2">Q1自媒體陪跑班</h1>
-                            <p className="text-slate-400 mb-8 font-bold">你可以的！一起向前！</p>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-2">
-                                    {Object.keys(STUDENT_LIST).map(c => (
-                                        <button key={c} onClick={() => { window.selectedClass = c; document.getElementById('s-select').innerHTML = `<option value="">點選姓名</option>` + STUDENT_LIST[c].map(n => `<option value="${n}">${n}</option>`).join(''); }} className="p-3 border-2 rounded-xl font-bold hover:border-indigo-500 focus:bg-indigo-600 focus:text-white transition">{c}</button>
-                                    ))}
+                            <p className="text-slate-400 font-medium mb-8">你可以的！一起向前！</p>
+                            <div className="space-y-6 text-left">
+                                <div>
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">選擇班級</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.keys(STUDENT_LIST).map(c => (
+                                            <button key={c} onClick={() => { window.selCls = c; document.getElementById('s-select').innerHTML = `<option value="">點選姓名</option>` + STUDENT_LIST[c].map(n => `<option value="${n}">${n}</option>`).join(''); }} className="p-3 border-2 rounded-xl font-bold hover:border-indigo-500 transition focus:bg-indigo-600 focus:text-white text-sm">{c}</button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <select id="s-select" className="w-full p-4 border-2 rounded-2xl bg-white font-bold outline-none"><option value="">請先選擇班級</option></select>
-                                <button onClick={() => { const n = document.getElementById('s-select').value; if (n && window.selectedClass) handleLogin(n, window.selectedClass); }} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-indigo-100">進入系統</button>
+                                <select id="s-select" className="w-full p-3 border-2 rounded-xl bg-white font-bold outline-none text-sm"><option value="">請先選擇班級</option></select>
+                                <button onClick={() => { const n = document.getElementById('s-select').value; if (n && window.selCls) { const d = {name:n, class:window.selCls}; setIdentity(d); localStorage.setItem('portal_identity', JSON.stringify(d)); } }} className="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg shadow-indigo-100 transition hover:bg-indigo-700">進入教室</button>
                             </div>
                         </div>
                     </div>
@@ -174,24 +169,27 @@
             }
 
             return (
-                <div className="min-h-screen flex flex-col lg:flex-row">
-                    <nav className="w-full lg:w-64 bg-white border-r p-6 flex flex-col shadow-sm">
-                        <div className="flex items-center gap-3 mb-10 p-3 bg-slate-50 rounded-2xl">
+                <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row text-slate-700">
+                    <nav className="w-full lg:w-64 bg-white border-r flex flex-col p-6 shadow-sm">
+                        <div className="flex items-center space-x-3 mb-10 p-3 bg-slate-50 rounded-2xl">
                             <div className="bg-indigo-600 p-2 rounded-lg text-white"><Icon name="user" /></div>
-                            <div className="text-left"><p className="font-black text-sm">{identity.name}</p><p className="text-[10px] text-indigo-500 font-bold uppercase">{identity.class}</p></div>
+                            <div className="overflow-hidden">
+                                <p className="font-black text-slate-800 truncate">{identity.name}</p>
+                                <p className="text-[10px] font-bold text-indigo-500 tracking-widest uppercase">{identity.class}</p>
+                            </div>
                         </div>
                         <div className="space-y-2 flex-1">
-                            <NavItem active={currentView==='upload'} icon={<Icon name="cloud-upload"/>} label="作業上傳" onClick={()=>setCurrentView('upload')} />
-                            <NavItem active={currentView==='peer'} icon={<Icon name="message-square"/>} label="同儕互評" onClick={()=>setCurrentView('peer')} />
-                            <NavItem active={currentView==='private'} icon={<Icon name="heart"/>} label="觀看回饋" onClick={()=>setCurrentView('private')} />
-                            <NavItem active={currentView==='overview'} icon={<Icon name="bar-chart-3"/>} label="進度總覽" onClick={()=>setCurrentView('overview')} />
+                            <NavItem active={currentView==='upload'} icon="cloud-upload" label="作業上傳" onClick={()=>setCurrentView('upload')} />
+                            <NavItem active={currentView==='peer'} icon="message-square" label="同儕互評" onClick={()=>setCurrentView('peer')} />
+                            <NavItem active={currentView==='private'} icon="heart" label="觀看回饋" onClick={()=>setCurrentView('private')} />
+                            <NavItem active={currentView==='overview'} icon="bar-chart-3" label="進度總覽" onClick={()=>setCurrentView('overview')} />
                         </div>
-                        <button onClick={()=>{localStorage.clear(); location.reload();}} className="flex items-center gap-3 p-3 text-slate-400 font-bold hover:text-red-500 mt-4"><Icon name="log-out" />登出</button>
+                        <button onClick={()=>{localStorage.clear(); location.reload();}} className="flex items-center space-x-3 p-3 text-slate-400 font-bold hover:text-red-500 transition border-t mt-4 pt-4"><Icon name="log-out" /><span>登出</span></button>
                     </nav>
                     <main className="flex-1 p-6 lg:p-10 overflow-y-auto">
-                        {currentView === 'upload' && <UploadView dates={SEMESTER_WEEKS.map(w => w.date)} assignments={assignments} identity={identity} onUpload={submitAssignment} onDelete={deleteAssignment} />}
-                        {currentView === 'peer' && <PeerView assignments={assignments} comments={comments} onPostComment={postComment} identity={identity} dates={SEMESTER_WEEKS.map(w => w.date)} getDeadline={getCommentDeadline} />}
-                        {currentView === 'private' && <PrivateView assignments={assignments} comments={comments} identity={identity} />}
+                        {currentView === 'upload' && <UploadView dates={SEMESTER_WEEKS.map(w=>w.date)} assignments={assignments} identity={identity} onUpload={submitAssignment} onDelete={deleteAssignment} />}
+                        {currentView === 'peer' && <PeerView assignments={assignments} comments={comments} onPostComment={postComment} onDeleteComment={deleteComment} identity={identity} dates={SEMESTER_WEEKS.map(w=>w.date)} getDeadline={getCommentDeadline} />}
+                        {currentView === 'private' && <PrivateView assignments={assignments} comments={comments} onDeleteComment={deleteComment} identity={identity} />}
                         {currentView === 'overview' && <OverviewBoard assignments={assignments} comments={comments} weeks={SEMESTER_WEEKS} />}
                     </main>
                 </div>
@@ -199,88 +197,121 @@
         };
 
         const NavItem = ({ active, icon, label, onClick }) => (
-            <button onClick={onClick} className={`w-full flex items-center gap-3 p-3 rounded-xl transition font-bold ${active ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>
-                {icon} <span className="text-sm">{label}</span>
+            <button onClick={onClick} className={`w-full flex items-center space-x-3 p-3 rounded-xl transition font-bold ${active ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}>
+                <Icon name={icon} /> <span className="text-sm">{label}</span>
             </button>
         );
 
         const UploadView = ({ dates, assignments, identity, onUpload, onDelete }) => (
             <div className="max-w-4xl mx-auto space-y-6 text-left">
-                <h2 className="text-2xl font-black mb-8">作業上傳區</h2>
-                {dates.map((date, idx) => {
-                    const myAssigns = assignments.filter(a => a.weekDate === date && a.studentName === identity.name);
-                    return (
-                        <div key={idx} className="bg-white p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row gap-6 items-center">
-                            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center font-black text-indigo-600 text-lg">W{idx+1}</div>
-                            <div className="flex-1 w-full space-y-2 text-left">
-                                <p className="font-bold text-slate-400 text-xs">{date} 週日 20:00 截止</p>
-                                {myAssigns.map(a => (
-                                    <div key={a.id} className="flex justify-between bg-slate-50 p-3 rounded-xl border">
-                                        <span className="text-xs truncate max-w-[200px] text-indigo-600 underline font-bold">{a.url}</span>
-                                        <button onClick={()=>onDelete(a.id)} className="text-red-400"><Icon name="trash-2" size={14}/></button>
+                <h2 className="text-2xl font-black text-slate-800">作業上傳區</h2>
+                <div className="grid gap-6">
+                    {dates.map((date, idx) => {
+                        const myA = assignments.filter(a => a.weekDate === date && a.studentName === identity.name);
+                        return (
+                            <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+                                <div className="flex items-center gap-4 flex-1">
+                                    <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center font-black text-indigo-600 text-lg">W{idx+1}</div>
+                                    <div><p className="font-black text-slate-700">{date} (週日)</p><p className="text-[10px] text-slate-300 font-bold uppercase tracking-tight">截止 20:00</p></div>
+                                </div>
+                                <div className="flex-[2] w-full space-y-2">
+                                    {myA.map(a => (
+                                        <div key={a.id} className="group flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                            <span className="text-xs text-slate-500 font-medium truncate max-w-[250px]">{a.url}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${a.isLate ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>{a.isLate ? '遲交' : '準時'}</span>
+                                                <button onClick={() => onDelete(a.id)} className="text-slate-300 hover:text-red-500 transition"><Icon name="trash-2" size={14}/></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="flex gap-2">
+                                        <input id={`in-${date}`} placeholder="貼上網址..." className="flex-1 text-xs p-3 bg-white border-b-2 outline-none focus:border-indigo-400 font-bold" />
+                                        <button onClick={() => { const el = document.getElementById(`in-${date}`); if(el.value) { onUpload(date, el.value); el.value=''; }}} className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-black shadow-lg">上傳</button>
                                     </div>
-                                ))}
-                                <div className="flex gap-2">
-                                    <input type="text" id={`in-${date}`} placeholder="貼上作業網址..." className="flex-1 text-xs p-3 border-b-2 outline-none focus:border-indigo-500" />
-                                    <button onClick={() => { const el = document.getElementById(`in-${date}`); if(el.value) { onUpload(date, el.value); el.value=''; }}} className="bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md">上傳</button>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
         );
 
-        const PeerView = ({ assignments, comments, onPostComment, identity, dates, getDeadline }) => {
+        const PeerView = ({ assignments, comments, onPostComment, onDeleteComment, identity, dates, getDeadline }) => {
             const [selDate, setSelDate] = useState(dates[0]);
             const filtered = assignments.filter(a => a.weekDate === selDate && a.studentClass === identity.class);
+            const deadline = getDeadline(selDate, identity.class);
+
             return (
                 <div className="max-w-6xl mx-auto text-left">
-                    <div className="flex justify-between items-center mb-8">
-                        <h2 className="text-2xl font-black">同儕互評</h2>
-                        <select value={selDate} onChange={e => setSelDate(e.target.value)} className="p-3 border-2 rounded-xl font-bold text-sm outline-none">
+                    <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-800">同儕互評</h2>
+                            <p className="text-[10px] text-slate-400 font-bold">截止時間：{deadline?.toLocaleString()}</p>
+                        </div>
+                        <select value={selDate} onChange={e => setSelDate(e.target.value)} className="p-3 border-2 rounded-xl font-black text-sm outline-none bg-white">
                             {dates.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filtered.map(a => (
-                            <div key={a.id} className={`bg-white rounded-[32px] border p-6 h-[480px] flex flex-col shadow-sm ${a.studentName === identity.name ? 'ring-2 ring-indigo-600' : ''}`}>
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="font-black text-slate-800">{a.studentName} ({a.weekDate})</span>
-                                    <a href={a.url} target="_blank" className="bg-indigo-50 text-indigo-600 p-2 rounded-xl"><Icon name="external-link" size={16}/></a>
+                        {filtered.map(a => {
+                            const isSelf = a.studentName === identity.name;
+                            const myC = comments.filter(c => c.assignmentId === a.id);
+                            return (
+                                <div key={a.id} className={`bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col h-[480px] overflow-hidden relative ${isSelf ? 'ring-2 ring-indigo-600' : ''}`}>
+                                    {isSelf && <div className="absolute top-4 left-4 z-10 bg-indigo-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg flex items-center gap-1"><Icon name="user" size={10}/>這是你</div>}
+                                    <div className="p-5 pt-12 bg-slate-50/50 border-b flex justify-between items-center">
+                                        <div className="flex flex-col"><span className="font-black text-slate-700 text-base">{a.studentName}</span><span className={`text-[10px] font-black ${a.isLate ? 'text-orange-500' : 'text-green-500'}`}>{a.isLate ? '遲交' : '準時繳交'}</span></div>
+                                        <a href={a.url} target="_blank" className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg"><Icon name="external-link" size={16}/></a>
+                                    </div>
+                                    <div className="flex-1 p-5 overflow-y-auto space-y-4 scrollbar-hide">
+                                        {myC.length === 0 ? <div className="h-full flex items-center justify-center text-slate-300 italic text-xs">尚無回饋</div> : myC.map(c => (
+                                            <div key={c.id} className={`text-xs p-4 rounded-2xl border ${c.isSelfComment ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="font-black text-indigo-600">{c.author} {c.isSelfComment && '(自評)'}</span>
+                                                    {c.author === identity.name && (
+                                                        <button onClick={() => onDeleteComment(c.id)} className="text-red-400 hover:text-red-600"><Icon name="trash-2" size={12}/></button>
+                                                    )}
+                                                </div>
+                                                <p className="text-slate-600 leading-relaxed">{c.text}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="p-4 bg-slate-50/30 border-t flex gap-2">
+                                        <input id={`cm-${a.id}`} placeholder="輸入回饋..." className="flex-1 text-xs p-3 border rounded-xl outline-none shadow-sm" onKeyDown={e => {if(e.key==='Enter'){onPostComment(a.id, e.target.value, a.weekDate, a.studentName); e.target.value='';}}} />
+                                        <button onClick={() => {const el=document.getElementById(`cm-${a.id}`); onPostComment(a.id, el.value, a.weekDate, a.studentName); el.value='';}} className="bg-indigo-600 text-white p-3 rounded-xl shadow-lg"><Icon name="send" size={16}/></button>
+                                    </div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto space-y-3 mb-4 scrollbar-hide">
-                                    {comments.filter(c => c.assignmentId === a.id).map((c, i) => (
-                                        <div key={i} className="text-xs p-3 rounded-2xl bg-slate-50 border">
-                                            <p className="font-black text-indigo-600 mb-1">{c.author} {c.isSelfComment && '(自評)'}</p>
-                                            <p>{c.text}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    <input type="text" id={`cm-${a.id}`} placeholder="輸入回饋..." className="flex-1 text-xs p-3 border rounded-xl outline-none" />
-                                    <button onClick={() => { const el = document.getElementById(`cm-${a.id}`); if(el.value) { onPostComment(a.id, el.value, a.weekDate, a.studentName); el.value=''; }}} className="bg-indigo-600 text-white p-3 rounded-xl"><Icon name="send" size={16}/></button>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             );
         };
 
-        const PrivateView = ({ assignments, comments, identity }) => {
-            const myAssigns = assignments.filter(a => a.studentName === identity.name);
+        const PrivateView = ({ assignments, comments, onDeleteComment, identity }) => {
+            const myA = assignments.filter(a => a.studentName === identity.name);
             return (
                 <div className="max-w-4xl mx-auto space-y-8 text-left">
-                    <h2 className="text-2xl font-black">我的回饋清單</h2>
-                    {myAssigns.map(a => (
-                        <div key={a.id} className="bg-white p-8 rounded-[40px] border shadow-sm space-y-4">
-                            <h3 className="text-xl font-black text-indigo-600">{a.weekDate} 作業</h3>
-                            {comments.filter(c => c.assignmentId === a.id).map((c, i) => (
-                                <div key={i} className="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 font-bold text-sm">
-                                    <span className="text-indigo-400">{c.author}:</span> {c.text}
-                                </div>
-                            ))}
+                    <h2 className="text-2xl font-black text-slate-800">觀看回饋</h2>
+                    {myA.map(a => (
+                        <div key={a.id} className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6">
+                            <div className="flex justify-between items-center border-b pb-4">
+                                <h3 className="text-xl font-black text-indigo-600">{a.weekDate} 週作業回饋</h3>
+                                <a href={a.url} target="_blank" className="text-xs text-indigo-500 underline font-bold flex items-center gap-1">開啟網址<Icon name="external-link" size={12}/></a>
+                            </div>
+                            <div className="grid gap-4">
+                                {comments.filter(c => c.assignmentId === a.id).length === 0 ? <p className="text-slate-300 italic text-sm">暫無回饋</p> : comments.filter(c => c.assignmentId === a.id).map(c => (
+                                    <div key={c.id} className={`p-6 rounded-3xl border-l-4 shadow-sm flex flex-col gap-2 ${c.isSelfComment ? 'bg-indigo-50 border-indigo-400' : 'bg-slate-50 border-slate-500'}`}>
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-black text-slate-800">{c.author} {c.isSelfComment && '(我的備註)'}</span>
+                                            {c.author === identity.name && (
+                                                <button onClick={() => onDeleteComment(c.id)} className="text-red-400 hover:text-red-600"><Icon name="trash-2" size={14}/></button>
+                                            )}
+                                        </div>
+                                        <p className="text-slate-600 text-sm leading-relaxed">{c.text}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -288,45 +319,66 @@
         };
 
         const OverviewBoard = ({ assignments, comments, weeks }) => {
-            const [filterClass, setFilterClass] = useState('早班');
-            const studentData = useMemo(() => {
-                return STUDENT_LIST[filterClass].map(name => {
-                    const summaries = weeks.map(w => {
-                        const hasAssign = assignments.some(a => a.studentName === name && a.weekDate === w.date);
-                        return { date: w.date, done: hasAssign };
-                    });
-                    return { name, summaries };
-                });
-            }, [filterClass, assignments, weeks]);
+            const [fCls, setFCls] = useState('早班');
+            const allW = weeks.map(w => w.date);
+            const data = STUDENT_LIST[fCls].map(name => ({
+                name,
+                summary: allW.map(date => {
+                    const myA = assignments.filter(a => a.studentName === name && a.weekDate === date);
+                    const assignStatus = myA.length > 0 ? (myA.some(a => a.isLate) ? '遲交' : '準時') : '未交';
+                    const targetA = assignments.filter(a => a.weekDate === date && a.studentName !== name && a.studentClass === fCls && !a.isLate);
+                    const commentedIds = new Set(comments.filter(c => c.author === name && !c.isSelfComment && targetA.some(ta => ta.id === c.assignmentId)).map(c => c.assignmentId));
+                    let commentStatus = targetA.length === 0 ? '免評' : (commentedIds.size >= targetA.length ? '完成' : '未完');
+                    return { assignStatus, commentStatus };
+                })
+            }));
 
             return (
-                <div className="max-w-full mx-auto text-left">
-                    <div className="flex justify-between items-end mb-8">
-                        <h2 className="text-2xl font-black">進度總覽</h2>
+                <div className="max-w-full mx-auto space-y-6 text-left">
+                    <div className="flex justify-between items-center px-4">
+                        <h2 className="text-2xl font-black text-slate-800">進度總覽</h2>
                         <div className="flex gap-2 p-1 bg-white rounded-xl border">
                             {Object.keys(STUDENT_LIST).map(c => (
-                                <button key={c} onClick={()=>setFilterClass(c)} className={`px-4 py-2 rounded-lg text-xs font-bold ${filterClass === c ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>{c}</button>
+                                <button key={c} onClick={() => setFCls(c)} className={`px-4 py-2 rounded-lg text-xs font-black transition ${fCls === c ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400'}`}>{c}</button>
                             ))}
                         </div>
                     </div>
                     <div className="bg-white rounded-[40px] shadow-sm border overflow-x-auto p-8">
-                        <table className="w-full border-collapse">
-                            <thead><tr className="border-b"><th className="p-4 text-left text-slate-400 text-xs font-black">姓名</th>{weeks.map(w=><th key={w.date} className="p-4 text-[10px] text-slate-400">{w.date}</th>)}</tr></thead>
+                        <table className="w-full text-center border-collapse">
+                            <thead><tr className="border-b border-slate-50"><th className="p-4 text-left text-xs font-black text-slate-400 min-w-[120px]">學員姓名</th>{allW.map(w=><th key={w} className="p-2 text-[10px] font-black text-slate-300">{w}</th>)}</tr></thead>
                             <tbody>
-                                {studentData.map(s => (
-                                    <tr key={s.name} className="border-b border-slate-50">
-                                        <td className="p-4 font-black text-sm">{s.name}</td>
-                                        {s.summaries.map((sm, i) => (
-                                            <td key={i} className="p-4"><div className={`w-5 h-5 mx-auto rounded-lg ${sm.done ? 'bg-green-500 shadow-sm' : 'bg-slate-100'}`}></div></td>
+                                {data.map(s => (
+                                    <tr key={s.name} className="border-b border-slate-50 hover:bg-slate-50 transition">
+                                        <td className="p-4 text-left font-black text-sm text-slate-700">{s.name}</td>
+                                        {s.summary.map((sum, i) => (
+                                            <td key={i} className="p-2">
+                                                <div className="flex justify-center gap-1">
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center text-[8px] font-black text-white ${sum.assignStatus === '準時' ? 'bg-green-500' : sum.assignStatus === '遲交' ? 'bg-orange-400' : 'bg-red-400'}`}>交</div>
+                                                    <div className={`w-5 h-5 rounded flex items-center justify-center text-[8px] font-black text-white ${sum.commentStatus === '完成' ? 'bg-green-500' : sum.commentStatus === '免評' ? 'bg-slate-200 text-slate-400' : 'bg-red-400'}`}>評</div>
+                                                </div>
+                                            </td>
                                         ))}
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                        <div className="mt-8 flex flex-wrap justify-center gap-6 border-t pt-6">
+                            <Legend dot="bg-green-500" text="準時 / 完成" />
+                            <Legend dot="bg-orange-400" text="遲交" />
+                            <Legend dot="bg-red-400" text="未完成" />
+                            <Legend dot="bg-slate-200" text="無須回饋" />
+                        </div>
                     </div>
                 </div>
             );
         };
+
+        const Legend = ({ dot, text }) => (
+            <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${dot}`}></div>
+                <span className="text-[10px] font-black text-slate-500">{text}</span>
+            </div>
+        );
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
