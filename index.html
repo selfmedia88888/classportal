@@ -17,13 +17,14 @@
         .card-shadow { box-shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.1); }
         #loading-overlay { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .progress-bar { transition: width 0.5s ease-out; }
+        .badge-glow { box-shadow: 0 0 15px rgba(79, 70, 229, 0.4); }
         .my-assignment-card { border: 4px solid #4f46e5 !important; box-shadow: 0 0 25px rgba(79, 70, 229, 0.3) !important; background-color: #f5f7ff !important; }
         @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .animate-soft { animation: pulse-soft 2s infinite; }
     </style>
 </head>
 <body>
-    <div id="loading-overlay" class="font-black text-indigo-600 text-2xl italic animate-pulse">介面優化中... 🚀</div>
+    <div id="loading-overlay" class="font-black text-indigo-600 text-2xl italic animate-pulse">系統校準中... 🚀</div>
     <div id="root"></div>
 
     <script type="module">
@@ -81,18 +82,10 @@
             return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
         };
 
-        const smartOpenIG = (rawUrl) => {
-            if (!rawUrl) return;
-            let cleanUrl = rawUrl.split('?')[0];
-            if (!cleanUrl.endsWith('/')) cleanUrl += '/';
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            if (isMobile) {
-                const match = cleanUrl.match(/\/(?:reels|p|reel|tv)\/([A-Za-z0-9_-]+)/);
-                if (match && match[1]) {
-                    window.location.href = `instagram://reels/${match[1]}/`;
-                    setTimeout(() => { window.open(cleanUrl, '_blank'); }, 1200);
-                } else { window.open(cleanUrl, '_blank'); }
-            } else { window.open(cleanUrl, '_blank'); }
+        // --- 回歸原始跳轉：不再過濾，直接開啟 ---
+        const openOriginalUrl = (url) => {
+            if (!url) return;
+            window.open(url, '_blank');
         };
 
         function App() {
@@ -104,25 +97,32 @@
             const [comments, setComments] = useState([]);
             const [announcement, setAnnouncement] = useState("");
             
+            // --- 精確偵測當週日期 ---
             const getCurrentWeekDate = () => {
                 const now = new Date();
                 const currentYear = 2026;
-                for (let i = SEMESTER_WEEKS.length - 1; i >= 0; i--) {
+                let foundDate = SEMESTER_WEEKS[0].date;
+                for (let i = 0; i < SEMESTER_WEEKS.length; i++) {
                     const [m, d] = SEMESTER_WEEKS[i].date.split('/').map(Number);
                     const weekDate = new Date(currentYear, m - 1, d);
-                    if (now >= weekDate) return SEMESTER_WEEKS[i].date;
+                    if (now >= weekDate) {
+                        foundDate = SEMESTER_WEEKS[i].date;
+                    } else {
+                        break;
+                    }
                 }
-                return SEMESTER_WEEKS[0].date;
+                return foundDate;
             };
 
             const [selectedPeerDate, setSelectedPeerDate] = useState(getCurrentWeekDate());
             const [overviewClass, setOverviewClass] = useState("早班");
             const [quote, setQuote] = useState(MOTIVATION_QUOTES[0]);
 
-            // --- 核心改動：監聽視圖切換，強制重置日期 ---
+            // 強制偵測切換視圖
             useEffect(() => {
                 if (currentView === 'peer') {
-                    setSelectedPeerDate(getCurrentWeekDate());
+                    const todayWeek = getCurrentWeekDate();
+                    setSelectedPeerDate(todayWeek);
                 }
             }, [currentView]);
 
@@ -183,14 +183,6 @@
                 return { numerator: completed.length, denominator: timelyTargets.length, remainingNames };
             };
 
-            const getBadge = (name) => {
-                const count = assignments.filter(a => a.studentName === name).length;
-                if (count >= 10) return { text: "陪跑勞模 👑", color: "text-amber-500" };
-                if (count >= 5) return { text: "穩定輸出 🚀", color: "text-indigo-500" };
-                if (count >= 1) return { text: "初試啼聲 🐣", color: "text-emerald-500" };
-                return { text: "新晉學員 🌱", color: "text-slate-400" };
-            };
-
             const handleSubmitAssignment = async (weekDate) => {
                 const el = document.getElementById(`in-${weekDate}`);
                 if(el && el.value) {
@@ -211,36 +203,32 @@
                 }
             };
 
-            // --- 核心改動：限按一讚且可撤回 ---
             const handleLikeToggle = async (comment) => {
                 const docRef = window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments', comment.id);
                 const likedBy = comment.likedBy || [];
-                
                 if (likedBy.includes(identity.name)) {
-                    // 已按讚，執行「撤回」
                     await window.fb.updateDoc(docRef, { likedBy: window.fb.arrayRemove(identity.name) });
                 } else {
-                    // 未按讚，執行「加入按讚」
                     await window.fb.updateDoc(docRef, { likedBy: window.fb.arrayUnion(identity.name) });
                 }
             };
 
             const handleDeleteAssignment = async (id) => {
-                if (!confirm("確定要刪除作業嗎？")) return;
+                if (!confirm("確定刪除作業嗎？")) return;
                 await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'assignments', id));
             };
 
             const handleDeleteComment = async (id) => {
-                if (!confirm("確定要刪除留言嗎？")) return;
+                if (!confirm("確定刪除留言嗎？")) return;
                 await window.fb.deleteDoc(window.fb.doc(window.fb.db, 'artifacts', window.fb.appId, 'public', 'data', 'comments', id));
             };
 
             if (!ready) return null;
             if (!identity) {
                 return (
-                    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 text-left font-black">
-                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border-t-8 border-indigo-600 font-black">
-                            <h1 className="text-3xl text-slate-800 mb-6 italic underline decoration-indigo-200 text-center">Q1 Classroom</h1>
+                    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+                        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md border-t-8 border-indigo-600 font-black text-left">
+                            <h1 className="text-3xl text-slate-800 mb-6 italic underline decoration-indigo-200 text-center font-black">Q1 Classroom</h1>
                             <div className="grid grid-cols-2 gap-2 mb-6">
                                 {["早班", "晚班"].map(c => (
                                     <button key={c} onClick={() => setLoginClass(c)} className={`p-3 border-2 rounded-2xl transition font-black ${loginClass === c ? 'border-indigo-600 bg-indigo-600 text-white shadow-md' : 'border-slate-100 text-slate-400 hover:bg-slate-50'}`}>{c}</button>
@@ -263,59 +251,63 @@
                 );
             }
 
-            const badge = getBadge(identity.name);
-
             return (
                 <div className="min-h-screen flex flex-col lg:flex-row font-black">
                     <nav className="w-full lg:w-72 bg-white p-8 flex flex-col border-r border-slate-200 shrink-0 text-left font-black">
-                        <div className="blue-gradient p-5 rounded-[30px] text-white shadow-lg mb-10 flex items-center gap-4 text-left relative overflow-hidden font-black">
+                        <div className="blue-gradient p-5 rounded-[30px] text-white shadow-lg mb-10 flex items-center gap-4 text-left relative overflow-hidden">
                             <Icon name="user" />
-                            <div className="overflow-hidden z-10 font-black">
+                            <div className="overflow-hidden z-10">
                                 <div className="text-lg truncate font-black">{identity.name}</div>
-                                <div className={`text-[10px] font-black ${badge.color} bg-white/90 px-2 py-0.5 rounded-full inline-block mt-1 font-black`}>{badge.text}</div>
+                                <div className={`text-[10px] font-black text-indigo-600 bg-white/90 px-2 py-0.5 rounded-full inline-block mt-1 font-black`}>{identity.class}</div>
                             </div>
                         </div>
-                        <div className="space-y-2 flex-1 text-left">
-                            {['upload', 'peer', 'personal', 'overview'].map(v => (
-                                <button key={v} onClick={()=>setCurrentView(v)} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition font-black ${currentView===v?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}>
-                                    <Icon name={v==='upload'?'file-up':v==='peer'?'users-round':v==='personal'?'heart':'layout-dashboard'} />
-                                    {v==='upload'?'作業上傳':v==='peer'?'同儕互評':v==='personal'?'我的回饋':'進度牆'}
-                                </button>
-                            ))}
+                        <div className="space-y-2 flex-1 text-left font-black">
+                            <button onClick={()=>setCurrentView('upload')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition font-black ${currentView==='upload'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}>
+                                <Icon name="file-up" /> 作業上傳
+                            </button>
+                            <button onClick={()=>setCurrentView('peer')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition font-black ${currentView==='peer'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}>
+                                <Icon name="users-round" /> 同儕互評
+                            </button>
+                            <button onClick={()=>setCurrentView('personal')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition font-black ${currentView==='personal'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}>
+                                <Icon name="heart" /> 我的回饋
+                            </button>
+                            <button onClick={()=>setCurrentView('overview')} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition font-black ${currentView==='overview'?'bg-indigo-50 text-indigo-600 shadow-sm':'text-slate-400 hover:text-indigo-600'}`}>
+                                <Icon name="layout-dashboard" /> 進度牆
+                            </button>
                             <button onClick={()=>{localStorage.clear(); location.reload();}} className="mt-10 w-full flex items-center gap-4 p-4 text-slate-300 hover:text-red-500 transition font-black"><Icon name="power" />登出系統</button>
                         </div>
                     </nav>
 
                     <main className="flex-1 p-6 lg:p-12 overflow-y-auto text-left font-black">
-                        <div className="max-w-5xl mx-auto mb-10 bg-white p-6 rounded-[30px] card-shadow border border-slate-100 flex items-center gap-6 font-black">
-                            <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 shadow-inner"><Icon name="megaphone" /></div>
+                        <div className="max-w-5xl mx-auto mb-10 bg-white p-6 rounded-[30px] card-shadow border border-slate-100 flex items-center gap-6 font-black font-black">
+                            <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 shadow-inner font-black"><Icon name="megaphone" /></div>
                             <div className="flex-1">
-                                <div className="text-rose-500 text-[10px] uppercase tracking-widest mb-1 animate-soft font-black text-left">今日金句</div>
+                                <div className="text-rose-500 text-[10px] uppercase tracking-widest mb-1 font-black text-left">今日提醒</div>
                                 <div className="text-slate-700 tracking-tight font-black">{announcement || quote}</div>
                             </div>
                         </div>
 
                         {currentView === 'upload' && (
                             <div className="max-w-4xl mx-auto space-y-6 font-black text-left">
-                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic mb-4 font-black">Weekly Submission</h2>
+                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic mb-4">Weekly Submission</h2>
                                 {SEMESTER_WEEKS.map((w, i) => (
                                     <div key={i} className={`bg-white p-8 rounded-[40px] card-shadow border transition-all duration-500 flex flex-col md:flex-row gap-6 items-center ${w.date === selectedPeerDate ? 'border-indigo-400 ring-4 ring-indigo-50' : 'border-slate-50'}`}>
                                         <div className="w-14 h-14 blue-gradient rounded-2xl flex items-center justify-center text-white shrink-0 shadow-md italic text-xl font-black">W{i+1}</div>
                                         <div className="flex-1 w-full space-y-4">
                                             <div className="text-[10px] text-slate-400 uppercase italic text-left font-black">{w.date} 20:00 截止</div>
                                             {assignments.filter(a => a.weekDate === w.date && a.studentName === identity.name).map(a => (
-                                                <div key={a.id} className="bg-slate-50 p-4 rounded-2xl flex justify-between items-center border border-slate-100 font-black">
-                                                    <button onClick={() => smartOpenIG(a.url)} className="text-sm text-indigo-600 underline truncate text-left hover:text-indigo-800 font-black">預覽我的作業 ↗</button>
+                                                <div key={a.id} className="bg-slate-50 p-4 rounded-2xl flex justify-between items-center border border-slate-100">
+                                                    <button onClick={() => openOriginalUrl(a.url)} className="text-sm text-indigo-600 underline truncate text-left hover:text-indigo-800 font-black">預覽我的作業 ↗</button>
                                                     <button onClick={() => handleDeleteAssignment(a.id)} className="ml-4 text-rose-500 hover:text-rose-700 transition font-black"><Icon name="trash-2" size={14}/></button>
                                                 </div>
                                             ))}
-                                            <div className="flex gap-3 relative font-black">
+                                            <div className="flex gap-3 relative">
                                                 <input id={`in-${w.date}`} 
                                                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSubmitAssignment(w.date); }}
                                                     className="flex-1 bg-slate-50 border-b-2 border-slate-100 outline-none p-3 pr-12 text-sm focus:border-indigo-500 font-black text-left" 
                                                     placeholder="在此輸入 Instagram 連結..." 
                                                 />
-                                                <button onClick={() => handleSubmitAssignment(w.date)} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-indigo-600 transition font-black">
+                                                <button onClick={() => handleSubmitAssignment(w.date)} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-indigo-600 transition">
                                                     <Icon name="send" size={20} />
                                                 </button>
                                             </div>
@@ -326,42 +318,41 @@
                         )}
 
                         {currentView === 'peer' && (
-                            <div className="max-w-6xl mx-auto space-y-6 font-black text-left font-black">
+                            <div className="max-w-6xl mx-auto space-y-6 font-black text-left">
                                 {(() => {
                                     const stats = getPeerStats(selectedPeerDate, identity.name, identity.class);
                                     const percent = stats.denominator > 0 ? (stats.numerator / stats.denominator) * 100 : 0;
                                     return (
                                         <div className="bg-white p-8 rounded-[40px] card-shadow border-l-8 border-indigo-600 flex flex-col md:flex-row gap-8 items-center justify-between text-left font-black">
                                             <div className="flex-1 w-full font-black">
-                                                <div className="flex justify-between items-end mb-2 font-black">
+                                                <div className="flex justify-between items-end mb-2">
                                                     <div>
                                                         <h3 className="text-2xl text-slate-800 italic font-black">評價進度儀表板</h3>
                                                         <p className="text-slate-400 text-[10px] font-black">回饋同班「{identity.class}」且準時提交者</p>
                                                     </div>
                                                     <div className="text-right">
                                                         <span className="text-4xl text-indigo-600 font-black">{stats.numerator}</span>
-                                                        <span className="text-slate-300 mx-1">/</span>
+                                                        <span className="text-slate-300 mx-1 font-black">/</span>
                                                         <span className="text-xl text-slate-400 font-black">{stats.denominator}</span>
                                                     </div>
                                                 </div>
                                                 <div className="h-4 bg-slate-100 rounded-full overflow-hidden mb-4">
                                                     <div className="h-full blue-gradient progress-bar" style={{ width: `${percent}%` }}></div>
                                                 </div>
-                                                
                                                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                                     <div className="text-[10px] text-slate-400 mb-2 flex items-center gap-1 font-black font-black"><Icon name="target" size={12} /> 🎯 待回饋名單：</div>
                                                     <div className="flex flex-wrap gap-2 text-left">
                                                         {stats.remainingNames.length > 0 ? (
                                                             stats.remainingNames.map(name => (
-                                                                <span key={name} className="px-3 py-1 bg-white text-indigo-600 border border-indigo-100 rounded-full text-xs shadow-sm font-black">{name}</span>
+                                                                <span key={name} className="px-3 py-1 bg-white text-indigo-600 border border-indigo-100 rounded-full text-xs shadow-sm font-black font-black">{name}</span>
                                                             ))
                                                         ) : (
-                                                            <span className="text-emerald-500 text-xs italic">✨ 本週評價已全數完成！妳太優秀了！</span>
+                                                            <span className="text-emerald-500 text-xs italic font-black">✨ 本週評價已全數完成！妳太優秀了！</span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <select value={selectedPeerDate} onChange={(e)=>setSelectedPeerDate(e.target.value)} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-indigo-600 font-black font-black">
+                                            <select value={selectedPeerDate} onChange={(e)=>setSelectedPeerDate(e.target.value)} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-indigo-600 font-black">
                                                 {SEMESTER_WEEKS.map(w => <option key={w.date} value={w.date}>{w.date}</option>)}
                                             </select>
                                         </div>
@@ -374,28 +365,28 @@
                                             <div key={a.id} className={`bg-white rounded-[40px] p-6 card-shadow border-2 flex flex-col h-[480px] transition-all duration-300 ${isSelf ? 'my-assignment-card' : 'border-transparent'}`}>
                                                 <div className="flex justify-between items-center mb-6 shrink-0 font-black">
                                                     <div className="flex items-center gap-2">
-                                                        <div className={`text-lg font-black ${isSelf ? 'text-indigo-700' : 'text-slate-800'}`}>{a.studentName}</div>
+                                                        <div className={`text-lg font-black ${isSelf ? 'text-indigo-700 font-black' : 'text-slate-800'}`}>{a.studentName}</div>
                                                         {isSelf && <span className="bg-indigo-600 text-white text-[9px] px-2 py-0.5 rounded-full font-black">我的作品</span>}
                                                     </div>
-                                                    <button onClick={() => smartOpenIG(a.url)} className={`px-5 py-2 rounded-2xl text-xs transition font-black ${isSelf ? 'blue-gradient text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white font-black'}`}>觀看影片</button>
+                                                    <button onClick={() => openOriginalUrl(a.url)} className={`px-5 py-2 rounded-2xl text-xs transition font-black ${isSelf ? 'blue-gradient text-white shadow-md' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white'}`}>觀看影片</button>
                                                 </div>
                                                 <div className="flex-1 overflow-y-auto space-y-3 mb-4 scrollbar-hide text-left">
                                                     {comments.filter(c => c.assignmentId === a.id).map(c => {
                                                         const likedBy = c.likedBy || [];
                                                         const isLiked = likedBy.includes(identity.name);
                                                         return (
-                                                            <div key={c.id} className={`p-3 rounded-2xl text-[10px] border border-slate-100 relative group font-black ${c.author === a.studentName ? 'bg-indigo-50 font-black' : 'bg-slate-50'}`}>
-                                                                <div className="text-indigo-600 flex justify-between font-black items-center font-black">
-                                                                    <div className="flex flex-col font-black">
+                                                            <div key={c.id} className={`p-3 rounded-2xl text-[10px] border border-slate-100 relative group font-black ${c.author === a.studentName ? 'bg-indigo-50' : 'bg-slate-50'}`}>
+                                                                <div className="text-indigo-600 flex justify-between font-black items-center">
+                                                                    <div className="flex flex-col">
                                                                         <span>{c.author} {c.author === a.studentName && <span className="opacity-60 italic">(創作理念)</span>}</span>
-                                                                        <span className="text-[7px] text-slate-400 mt-0.5 font-black">{formatCommentDate(c.createdAt)}</span>
+                                                                        <span className="text-[7px] text-slate-400 mt-0.5">{formatCommentDate(c.createdAt)}</span>
                                                                     </div>
-                                                                    <div className="flex items-center gap-2 font-black font-black">
-                                                                        <button onClick={()=>handleLikeToggle(c)} className={`${isLiked ? 'text-rose-500' : 'text-slate-300'} flex items-center gap-0.5 hover:scale-110 transition font-black`}>
+                                                                    <div className="flex items-center gap-2 font-black">
+                                                                        <button onClick={()=>handleLikeToggle(c)} className={`${isLiked ? 'text-rose-500' : 'text-slate-300'} flex items-center gap-0.5 hover:scale-110 transition`}>
                                                                             <Icon name="heart" size={12} className={isLiked ? "fill-rose-500" : ""}/> 
-                                                                            <span className="text-[8px] font-black">{likedBy.length}</span>
+                                                                            <span className="text-[8px]">{likedBy.length}</span>
                                                                         </button>
-                                                                        {c.author === identity.name && <button onClick={() => handleDeleteComment(c.id)} className="text-slate-300 hover:text-rose-500 font-black transition font-black">×</button>}
+                                                                        {c.author === identity.name && <button onClick={() => handleDeleteComment(c.id)} className="text-slate-300 hover:text-rose-500 transition font-black font-black">×</button>}
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-slate-700 font-bold mt-1 text-left font-black">{c.text}</div>
@@ -403,13 +394,13 @@
                                                         );
                                                     })}
                                                 </div>
-                                                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100 relative font-black font-black">
+                                                <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100 relative font-black">
                                                     <input id={`cm-${a.id}`} 
                                                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) handleSubmitComment(a.id); }}
                                                         className="flex-1 bg-transparent p-3 pr-10 text-[10px] outline-none font-black text-left" 
                                                         placeholder="輸入回饋..." 
                                                     />
-                                                    <button onClick={() => handleSubmitComment(a.id)} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-indigo-600 transition font-black">
+                                                    <button onClick={() => handleSubmitComment(a.id)} className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-indigo-600 transition">
                                                         <Icon name="message-square" size={18} />
                                                     </button>
                                                 </div>
@@ -422,24 +413,24 @@
 
                         {currentView === 'personal' && (
                             <div className="max-w-4xl mx-auto space-y-6 font-black text-left">
-                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic mb-4 font-black">Feedback Received</h2>
+                                <h2 className="text-xl text-slate-800 border-b-2 border-indigo-500 inline-block italic mb-4 font-black text-left">Feedback Received</h2>
                                 {assignments.filter(a => a.studentName === identity.name).sort((a,b)=> (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).map(a => (
                                     <div key={a.id} className="bg-white p-8 rounded-[40px] card-shadow border border-slate-100 mb-6 font-black text-left">
-                                        <div className="flex justify-between items-center mb-6 border-b border-slate-50 pb-4 font-black text-left">
-                                            <div className="text-indigo-600 italic font-black">Week {a.weekDate} 作品回饋</div>
-                                            <button onClick={() => smartOpenIG(a.url)} className="text-indigo-600 underline text-sm hover:text-indigo-800 font-black">觀看我的影片 ↗</button>
+                                        <div className="flex justify-between items-center mb-6 border-b border-slate-50 pb-4 font-black">
+                                            <div className="text-indigo-600 italic font-black text-left">Week {a.weekDate} 作品回饋</div>
+                                            <button onClick={() => openOriginalUrl(a.url)} className="text-indigo-600 underline text-sm hover:text-indigo-800 font-black">觀看我的影片 ↗</button>
                                         </div>
-                                        <div className="space-y-4 font-black">
+                                        <div className="space-y-4">
                                             {comments.filter(c => c.assignmentId === a.id && c.author !== identity.name).map((c, idx) => (
                                                 <div key={idx} className="flex gap-4 items-start text-left font-black">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 font-black font-black">{c.author[0]}</div>
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 text-indigo-600 font-black">{c.author[0]}</div>
                                                     <div className="bg-slate-50 p-4 rounded-[24px] flex-1 border border-slate-100 text-left font-black">
-                                                        <div className="flex justify-between items-center mb-1 font-black">
-                                                            <div className="text-[9px] text-indigo-400 font-black">{c.author}</div>
-                                                            <div className="text-[7px] text-slate-300 font-black">{formatCommentDate(c.createdAt)}</div>
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <div className="text-[9px] text-indigo-400 font-black font-black">{c.author}</div>
+                                                            <div className="text-[7px] text-slate-300">{formatCommentDate(c.createdAt)}</div>
                                                         </div>
-                                                        <div className="text-sm text-slate-700 font-bold font-black">{c.text}</div>
-                                                        {(c.likedBy || []).length > 0 && <div className="mt-2 text-[8px] text-rose-400 flex items-center gap-1 font-black"><Icon name="heart" size={10} className="fill-rose-400"/> 有 {(c.likedBy || []).length} 人覺得這則回饋很棒</div>}
+                                                        <div className="text-sm text-slate-700 font-bold font-black text-left">{c.text}</div>
+                                                        {(c.likedBy || []).length > 0 && <div className="mt-2 text-[8px] text-rose-400 flex items-center gap-1 font-black"><Icon name="heart" size={10} className="fill-rose-400"/> 有 {(c.likedBy || []).length} 人點讚</div>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -452,38 +443,36 @@
 
                         {currentView === 'overview' && (
                             <div className="space-y-8 font-black text-left">
-                                <div className="flex gap-4 p-2 bg-white rounded-3xl card-shadow inline-flex border border-slate-100 font-black font-black">
+                                <div className="flex gap-4 p-2 bg-white rounded-3xl card-shadow inline-flex border border-slate-100 font-black">
                                     {["早班", "晚班"].map(c => (
-                                        <button key={c} onClick={()=>setOverviewClass(c)} className={`px-10 py-3 rounded-2xl transition font-black font-black ${overviewClass === c ? 'blue-gradient text-white shadow-lg' : 'text-pink-300 hover:text-indigo-500 font-black'}`}>{c}</button>
+                                        <button key={c} onClick={()=>setOverviewClass(c)} className={`px-10 py-3 rounded-2xl transition font-black ${overviewClass === c ? 'blue-gradient text-white shadow-lg' : 'text-slate-300 hover:text-indigo-500'}`}>{c}</button>
                                     ))}
                                 </div>
                                 <div className="bg-white rounded-[40px] card-shadow border border-slate-100 overflow-hidden overflow-x-auto text-left font-black">
-                                    <table className="min-w-[900px] text-center border-collapse font-black font-black font-black">
+                                    <table className="min-w-[900px] text-center border-collapse">
                                         <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-xs font-black text-left">
-                                                <th className="p-6 text-left sticky left-0 bg-white border-r border-slate-100 font-black font-black">學員姓名</th>
-                                                {SEMESTER_WEEKS.map(w => <th key={w.date} className="p-4 font-black font-black font-black">{w.date}<br/><span className="text-[8px] opacity-40 italic">HW | FB</span></th>)}
+                                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-xs font-black text-left font-black">
+                                                <th className="p-6 text-left sticky left-0 bg-white border-r border-slate-100 font-black font-black font-black">學員姓名</th>
+                                                {SEMESTER_WEEKS.map(w => <th key={w.date} className="p-4 font-black font-black font-black">{w.date}<br/><span className="text-[8px] opacity-40 italic font-black font-black font-black">HW | FB</span></th>)}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {STUDENT_LIST[overviewClass].map(name => (
-                                                <tr key={name} className="border-b border-slate-50/50 hover:bg-slate-50/50 transition text-left font-black font-black">
-                                                    <td className="p-4 text-sm text-slate-700 sticky left-0 bg-white border-r border-slate-100 font-black font-black font-black">{name}</td>
+                                                <tr key={name} className="border-b border-slate-50/50 hover:bg-slate-50/50 transition text-left font-black">
+                                                    <td className="p-4 text-sm text-slate-700 sticky left-0 bg-white border-r border-slate-100 font-black font-black font-black font-black">{name}</td>
                                                     {SEMESTER_WEEKS.map(w => {
                                                         const work = assignments.find(a => a.studentName === name && a.weekDate === w.date);
                                                         const workStatus = work ? getHWStatus(w.date, work.createdAt) : "未完成";
                                                         const stats = getPeerStats(w.date, name, overviewClass);
-                                                        
                                                         let fbLabel = "未完成";
                                                         let fbColor = "text-rose-400";
                                                         if (stats.denominator === 0) { fbLabel = "免評"; fbColor = "text-slate-300"; }
                                                         else if (stats.numerator >= stats.denominator) { fbLabel = "完成"; fbColor = "text-emerald-500"; }
                                                         else if (stats.numerator > 0) { fbLabel = "未完"; fbColor = "text-amber-500"; }
-
                                                         return (
-                                                            <td key={w.date} className="p-2 text-center text-left font-black font-black font-black font-black">
-                                                                <div className={`text-[8px] rounded py-0.5 mb-1 font-black font-black font-black ${workStatus==='準時'?'bg-emerald-50 text-emerald-500 font-black':workStatus==='遲到'?'bg-amber-50 text-amber-500 font-black font-black':'bg-rose-50 text-rose-400'}`}>{workStatus === '準時' ? '完成' : workStatus}</div>
-                                                                <div className={`text-[8px] rounded py-0.5 font-black font-black font-black ${fbColor}`}>{fbLabel} ({stats.numerator}/{stats.denominator})</div>
+                                                            <td key={w.date} className="p-2 text-center text-left font-black">
+                                                                <div className={`text-[8px] rounded py-0.5 mb-1 font-black ${workStatus==='準時'?'bg-emerald-50 text-emerald-500 font-black font-black':'bg-rose-50 text-rose-400'}`}>{workStatus === '準時' ? '完成' : workStatus}</div>
+                                                                <div className={`text-[8px] rounded py-0.5 font-black ${fbColor}`}>{fbLabel} ({stats.numerator}/{stats.denominator})</div>
                                                             </td>
                                                         );
                                                     })}
